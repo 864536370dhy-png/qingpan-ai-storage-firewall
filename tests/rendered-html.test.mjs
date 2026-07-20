@@ -51,8 +51,11 @@ test("keeps the interactive workflow and dark design tokens in source", async ()
   assert.match(page, /confirmPlan/);
   assert.match(page, /PlanModal/);
   assert.match(page, /Agent Reach/);
+  assert.match(page, /qingpan-theme/);
+  assert.match(page, /界面主题/);
   assert.match(css, /--canvas:\s*var\(--gray-1000\)/);
   assert.match(css, /grid-template-columns:\s*218px minmax\(560px,\s*1fr\) 354px/);
+  assert.match(css, /\.desktop-shell\[data-theme="light"\]/);
   assert.match(css, /@media \(max-width:\s*980px\)/);
   assert.match(layout, /轻盘 · AI 空间防火墙/);
   assert.doesNotMatch(page, /SkeletonPreview/);

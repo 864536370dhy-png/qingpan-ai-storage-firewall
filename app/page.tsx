@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 type NavId = "overview" | "changes" | "budgets" | "investigate" | "vault" | "settings";
 type AppId = "capcut" | "wechat" | "xcode" | "lark";
+type Theme = "dark" | "light";
 
 type AppRecord = {
   id: AppId;
@@ -140,6 +141,7 @@ export default function Home() {
   const [selectedActions, setSelectedActions] = useState<string[]>(["preview", "proxy", "thumb"]);
   const [vaultItems, setVaultItems] = useState(0);
   const [restored, setRestored] = useState(false);
+  const [theme, setTheme] = useState<Theme>("dark");
   const [query, setQuery] = useState("为什么今天突然多了 31 GB？找出来源，但先不要删除");
   const [investigated, setInvestigated] = useState(false);
   const [budgets, setBudgets] = useState<Record<AppId, number>>({
@@ -170,6 +172,19 @@ export default function Home() {
     return () => window.clearInterval(timer);
   }, [scanState]);
 
+  useEffect(() => {
+    const savedTheme = window.localStorage.getItem("qingpan-theme");
+    const frame = window.requestAnimationFrame(() => {
+      if (savedTheme === "light" || savedTheme === "dark") setTheme(savedTheme);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem("qingpan-theme", theme);
+  }, [theme]);
+
   function startScan() {
     setScanProgress(0);
     setScanState("scanning");
@@ -192,7 +207,7 @@ export default function Home() {
   }
 
   return (
-    <main className="desktop-shell">
+    <main className="desktop-shell" data-theme={theme}>
       <aside className="sidebar">
         <div className="window-controls" aria-hidden="true">
           <i />
@@ -247,6 +262,24 @@ export default function Home() {
           </div>
           <div className="top-actions">
             <span className="demo-badge">前端演示模式</span>
+            <div className="theme-switch" role="group" aria-label="界面主题">
+              <button
+                type="button"
+                className={theme === "light" ? "active" : ""}
+                onClick={() => setTheme("light")}
+                aria-pressed={theme === "light"}
+              >
+                ☼ <span>浅色</span>
+              </button>
+              <button
+                type="button"
+                className={theme === "dark" ? "active" : ""}
+                onClick={() => setTheme("dark")}
+                aria-pressed={theme === "dark"}
+              >
+                ☾ <span>深色</span>
+              </button>
+            </div>
             <button type="button" className="icon-button" aria-label="通知">◌</button>
             <span className="avatar">D</span>
           </div>
