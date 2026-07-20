@@ -58,8 +58,9 @@ test("keeps the interactive workflow and dark design tokens in source", async ()
   assert.match(page, /不是当前总占用/);
   assert.match(page, /hourlyGrowth/);
   assert.match(page, /chartSourceMeta/);
-  assert.match(page, /每根柱子代表 1 小时/);
-  assert.match(page, /其他文件/);
+  assert.match(page, /先选择一个软件，再看它每小时增加了多少/);
+  assert.match(page, /trendAppId/);
+  assert.match(page, /single-trend-head/);
   assert.match(page, /Agent Reach/);
   assert.match(page, /qingpan-theme/);
   assert.match(page, /界面主题/);

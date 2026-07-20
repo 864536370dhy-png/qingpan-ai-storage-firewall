@@ -543,6 +543,20 @@ function Metric({ label, value, unit, note, tone, icon }: { label: string; value
 }
 
 function Changes({ onSelectApp }: { onSelectApp: (id: AppId) => void }) {
+  const [trendAppId, setTrendAppId] = useState<AppId>("capcut");
+  const trendApp = apps.find((app) => app.id === trendAppId) ?? apps[0];
+  const trendPoints = hourlyGrowth.map((item) => ({
+    time: item.time,
+    value: item.sources.find((source) => source.id === trendAppId)?.value ?? 0,
+  }));
+  const peakValue = Math.max(...trendPoints.map((item) => item.value), 0.1);
+  const selectedDayTotal = trendPoints.reduce((sum, item) => sum + item.value, 0);
+
+  function selectTrendApp(id: AppId) {
+    setTrendAppId(id);
+    onSelectApp(id);
+  }
+
   return (
     <div className="page">
       <div className="page-heading">
@@ -558,38 +572,50 @@ function Changes({ onSelectApp }: { onSelectApp: (id: AppId) => void }) {
           <strong className="net-growth-value">+31.6 GB<small>不是当前总占用</small></strong>
         </div>
         <div className="chart-explainer">
-          <span><i />每根柱子代表 1 小时，柱子里的颜色代表不同软件</span>
-          <em>鼠标移到柱子上，可查看每个软件的具体数值</em>
+          <span><i />先选择一个软件，再看它每小时增加了多少</span>
+          <em>一次只看一个软件，避免颜色混在一起</em>
         </div>
-        <div className="chart-legend" aria-label="软件颜色说明">
-          {(Object.keys(chartSourceMeta) as ChartSourceId[]).map((id) => (
-            <span key={id}><i style={{ background: chartSourceMeta[id].color }} />{chartSourceMeta[id].name}</span>
-          ))}
-        </div>
-        <div className="chart-bars" aria-label="每小时空间增长柱状图">
-          {hourlyGrowth.map((item) => {
-            const breakdown = item.sources
-              .map((source) => `${chartSourceMeta[source.id].name} +${source.value} GB`)
-              .join(" · ");
+        <div className="app-trend-picker" aria-label="选择要查看的软件">
+          {apps.map((app, index) => {
+            const dayTotal = hourlyGrowth.reduce(
+              (sum, item) => sum + (item.sources.find((source) => source.id === app.id)?.value ?? 0),
+              0,
+            );
             return (
               <button
                 type="button"
-                className="chart-bar"
-                key={item.time}
-                aria-label={`${item.time} 总新增 ${item.total} GB，${breakdown}`}
-                data-value={`${item.time} · 共 +${item.total} GB\n${breakdown}`}
+                key={app.id}
+                className={trendAppId === app.id ? "trend-app active" : "trend-app"}
+                style={{ "--trend-color": chartSourceMeta[app.id].color } as React.CSSProperties}
+                onClick={() => selectTrendApp(app.id)}
               >
-                <span className="chart-stack" style={{ height: `${(item.total / 2.6) * 100}%` }}>
-                  {item.sources.map((source) => (
-                    <i
-                      key={source.id}
-                      style={{ flexGrow: source.value, background: chartSourceMeta[source.id].color }}
-                    />
-                  ))}
-                </span>
+                <span className="trend-rank">{index + 1}</span>
+                <AppBadge app={app} small />
+                <span className="trend-app-name"><b>{app.name}</b><small>今日增加</small></span>
+                <strong>+{dayTotal.toFixed(1)} GB</strong>
               </button>
             );
           })}
+        </div>
+        <div className="single-trend-head">
+          <div><AppBadge app={trendApp} small /><span><b>{trendApp.name}每小时增长</b><small>鼠标移到柱子上查看具体数值</small></span></div>
+          <strong>全天 +{selectedDayTotal.toFixed(1)} GB</strong>
+        </div>
+        <div className="chart-bars single-source" aria-label={`${trendApp.name}每小时空间增长柱状图`}>
+          {trendPoints.map((item) => (
+            <button
+              type="button"
+              className="chart-bar"
+              key={item.time}
+              aria-label={`${item.time} ${trendApp.name}新增 ${item.value} GB`}
+              data-value={`${item.time} · ${trendApp.name} +${item.value} GB`}
+            >
+              <span
+                className="single-bar"
+                style={{ height: `${Math.max((item.value / peakValue) * 100, 3)}%`, background: chartSourceMeta[trendAppId].color }}
+              />
+            </button>
+          ))}
         </div>
         <div className="chart-axis"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>现在</span></div>
       </section>
