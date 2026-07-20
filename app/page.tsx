@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 type NavId = "overview" | "changes" | "budgets" | "investigate" | "vault" | "settings";
 type AppId = "capcut" | "wechat" | "xcode" | "lark";
 type Theme = "dark" | "light";
+type ChartSourceId = AppId | "other";
 
 type AppRecord = {
   id: AppId;
@@ -150,19 +151,39 @@ const timeline = [
   { time: "09:25", app: "飞书", note: "会议回放离线缓存", size: "+1.2 GB", tone: "indigo" },
 ];
 
-const hourlyGrowth = [
-  { time: "00:00–02:00", value: 0.7 },
-  { time: "02:00–04:00", value: 0.8 },
-  { time: "04:00–06:00", value: 1.3 },
-  { time: "06:00–08:00", value: 2.4 },
-  { time: "08:00–10:00", value: 3.1 },
-  { time: "10:00–12:00", value: 4.0 },
-  { time: "12:00–14:00", value: 2.2 },
-  { time: "14:00–16:00", value: 4.8 },
-  { time: "16:00–18:00", value: 3.0 },
-  { time: "18:00–20:00", value: 3.8 },
-  { time: "20:00–22:00", value: 2.9 },
-  { time: "22:00–现在", value: 2.6 },
+const chartSourceMeta: Record<ChartSourceId, { name: string; color: string }> = {
+  capcut: { name: "剪映", color: "#9a72ff" },
+  wechat: { name: "微信", color: "#34c985" },
+  xcode: { name: "Xcode", color: "#2fa8ff" },
+  lark: { name: "飞书", color: "#5f7fe8" },
+  other: { name: "其他文件", color: "#8f9aaa" },
+};
+
+const hourlyGrowth: { time: string; total: number; sources: { id: ChartSourceId; value: number }[] }[] = [
+  { time: "00:00–01:00", total: 0.2, sources: [{ id: "wechat", value: 0.1 }, { id: "other", value: 0.1 }] },
+  { time: "01:00–02:00", total: 0.2, sources: [{ id: "capcut", value: 0.1 }, { id: "other", value: 0.1 }] },
+  { time: "02:00–03:00", total: 0.4, sources: [{ id: "wechat", value: 0.2 }, { id: "lark", value: 0.1 }, { id: "other", value: 0.1 }] },
+  { time: "03:00–04:00", total: 0.4, sources: [{ id: "xcode", value: 0.2 }, { id: "wechat", value: 0.1 }, { id: "other", value: 0.1 }] },
+  { time: "04:00–05:00", total: 0.5, sources: [{ id: "wechat", value: 0.3 }, { id: "lark", value: 0.1 }, { id: "other", value: 0.1 }] },
+  { time: "05:00–06:00", total: 0.8, sources: [{ id: "xcode", value: 0.4 }, { id: "wechat", value: 0.2 }, { id: "other", value: 0.2 }] },
+  { time: "06:00–07:00", total: 1.1, sources: [{ id: "capcut", value: 0.5 }, { id: "wechat", value: 0.3 }, { id: "xcode", value: 0.2 }, { id: "other", value: 0.1 }] },
+  { time: "07:00–08:00", total: 1.3, sources: [{ id: "capcut", value: 0.7 }, { id: "wechat", value: 0.3 }, { id: "lark", value: 0.2 }, { id: "other", value: 0.1 }] },
+  { time: "08:00–09:00", total: 1.4, sources: [{ id: "capcut", value: 0.8 }, { id: "wechat", value: 0.4 }, { id: "lark", value: 0.2 }] },
+  { time: "09:00–10:00", total: 1.7, sources: [{ id: "capcut", value: 0.9 }, { id: "wechat", value: 0.5 }, { id: "xcode", value: 0.2 }, { id: "other", value: 0.1 }] },
+  { time: "10:00–11:00", total: 2.0, sources: [{ id: "capcut", value: 1.2 }, { id: "wechat", value: 0.4 }, { id: "xcode", value: 0.3 }, { id: "lark", value: 0.1 }] },
+  { time: "11:00–12:00", total: 2.0, sources: [{ id: "capcut", value: 1.0 }, { id: "wechat", value: 0.6 }, { id: "xcode", value: 0.3 }, { id: "other", value: 0.1 }] },
+  { time: "12:00–13:00", total: 1.1, sources: [{ id: "wechat", value: 0.5 }, { id: "capcut", value: 0.3 }, { id: "lark", value: 0.2 }, { id: "other", value: 0.1 }] },
+  { time: "13:00–14:00", total: 1.1, sources: [{ id: "capcut", value: 0.4 }, { id: "wechat", value: 0.4 }, { id: "xcode", value: 0.2 }, { id: "other", value: 0.1 }] },
+  { time: "14:00–15:00", total: 2.2, sources: [{ id: "capcut", value: 1.4 }, { id: "wechat", value: 0.4 }, { id: "xcode", value: 0.3 }, { id: "other", value: 0.1 }] },
+  { time: "15:00–16:00", total: 2.6, sources: [{ id: "capcut", value: 1.6 }, { id: "wechat", value: 0.5 }, { id: "xcode", value: 0.3 }, { id: "lark", value: 0.2 }] },
+  { time: "16:00–17:00", total: 1.4, sources: [{ id: "capcut", value: 0.7 }, { id: "wechat", value: 0.4 }, { id: "lark", value: 0.2 }, { id: "other", value: 0.1 }] },
+  { time: "17:00–18:00", total: 1.6, sources: [{ id: "capcut", value: 0.8 }, { id: "wechat", value: 0.5 }, { id: "xcode", value: 0.2 }, { id: "other", value: 0.1 }] },
+  { time: "18:00–19:00", total: 1.9, sources: [{ id: "capcut", value: 1.0 }, { id: "wechat", value: 0.6 }, { id: "xcode", value: 0.2 }, { id: "lark", value: 0.1 }] },
+  { time: "19:00–20:00", total: 1.9, sources: [{ id: "capcut", value: 1.1 }, { id: "wechat", value: 0.5 }, { id: "xcode", value: 0.2 }, { id: "other", value: 0.1 }] },
+  { time: "20:00–21:00", total: 1.5, sources: [{ id: "capcut", value: 0.7 }, { id: "wechat", value: 0.5 }, { id: "lark", value: 0.2 }, { id: "other", value: 0.1 }] },
+  { time: "21:00–22:00", total: 1.4, sources: [{ id: "capcut", value: 0.6 }, { id: "wechat", value: 0.5 }, { id: "xcode", value: 0.2 }, { id: "other", value: 0.1 }] },
+  { time: "22:00–23:00", total: 1.3, sources: [{ id: "capcut", value: 0.5 }, { id: "wechat", value: 0.5 }, { id: "lark", value: 0.2 }, { id: "other", value: 0.1 }] },
+  { time: "23:00–现在", total: 1.6, sources: [{ id: "capcut", value: 0.6 }, { id: "wechat", value: 0.6 }, { id: "xcode", value: 0.2 }, { id: "lark", value: 0.1 }, { id: "other", value: 0.1 }] },
 ];
 
 function AppBadge({ app, small = false }: { app: AppRecord; small?: boolean }) {
@@ -537,21 +558,38 @@ function Changes({ onSelectApp }: { onSelectApp: (id: AppId) => void }) {
           <strong className="net-growth-value">+31.6 GB<small>不是当前总占用</small></strong>
         </div>
         <div className="chart-explainer">
-          <span><i />每根柱子代表 2 小时内新增的空间</span>
-          <em>柱子越高，表示这段时间新增文件越多</em>
+          <span><i />每根柱子代表 1 小时，柱子里的颜色代表不同软件</span>
+          <em>鼠标移到柱子上，可查看每个软件的具体数值</em>
+        </div>
+        <div className="chart-legend" aria-label="软件颜色说明">
+          {(Object.keys(chartSourceMeta) as ChartSourceId[]).map((id) => (
+            <span key={id}><i style={{ background: chartSourceMeta[id].color }} />{chartSourceMeta[id].name}</span>
+          ))}
         </div>
         <div className="chart-bars" aria-label="每小时空间增长柱状图">
-          {hourlyGrowth.map((item) => (
-            <button
-              type="button"
-              className="chart-bar"
-              key={item.time}
-              aria-label={`${item.time} 新增 ${item.value} GB`}
-              data-value={`${item.time} · 新增 ${item.value} GB`}
-            >
-              <i style={{ height: `${(item.value / 4.8) * 100}%` }} />
-            </button>
-          ))}
+          {hourlyGrowth.map((item) => {
+            const breakdown = item.sources
+              .map((source) => `${chartSourceMeta[source.id].name} +${source.value} GB`)
+              .join(" · ");
+            return (
+              <button
+                type="button"
+                className="chart-bar"
+                key={item.time}
+                aria-label={`${item.time} 总新增 ${item.total} GB，${breakdown}`}
+                data-value={`${item.time} · 共 +${item.total} GB\n${breakdown}`}
+              >
+                <span className="chart-stack" style={{ height: `${(item.total / 2.6) * 100}%` }}>
+                  {item.sources.map((source) => (
+                    <i
+                      key={source.id}
+                      style={{ flexGrow: source.value, background: chartSourceMeta[source.id].color }}
+                    />
+                  ))}
+                </span>
+              </button>
+            );
+          })}
         </div>
         <div className="chart-axis"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>现在</span></div>
       </section>
