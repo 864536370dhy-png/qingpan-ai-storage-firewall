@@ -1,425 +1,680 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-type PlanItem = {
+type NavId = "overview" | "changes" | "budgets" | "investigate" | "vault" | "settings";
+type AppId = "capcut" | "wechat" | "xcode" | "lark";
+
+type AppRecord = {
+  id: AppId;
+  name: string;
+  glyph: string;
+  color: string;
+  size: number;
+  growth: number;
+  budget: number;
+  kind: string;
+  summary: string;
+  composition: { label: string; size: number; color: string }[];
+};
+
+type PlanAction = {
   id: string;
-  icon: string;
   title: string;
   detail: string;
   size: number;
-  tag: string;
-  tone: "safe" | "review" | "move";
-  selected: boolean;
+  risk: "安全" | "需确认";
 };
 
-const initialPlan: PlanItem[] = [
+const apps: AppRecord[] = [
   {
-    id: "cache",
-    icon: "◌",
-    title: "可重新生成的缓存",
-    detail: "微信、飞书、Chrome 等 7 个应用",
-    size: 8.6,
-    tag: "放心清理",
-    tone: "safe",
-    selected: true,
+    id: "capcut",
+    name: "剪映",
+    glyph: "剪",
+    color: "#6d8dff",
+    size: 48.6,
+    growth: 18.4,
+    budget: 30,
+    kind: "视频创作",
+    summary: "增长主要来自预览缓存和已关闭项目的代理文件，原始素材与工程文件未被列入方案。",
+    composition: [
+      { label: "工程素材", size: 19.8, color: "#6d8dff" },
+      { label: "代理文件", size: 14.6, color: "#9a72ff" },
+      { label: "预览缓存", size: 10.2, color: "#48d597" },
+      { label: "其他", size: 4, color: "#3b4658" },
+    ],
   },
   {
-    id: "duplicate",
-    icon: "▱",
-    title: "重复文件",
-    detail: "发现 42 组内容完全相同的文件",
-    size: 5.2,
-    tag: "需要确认",
-    tone: "review",
-    selected: true,
+    id: "wechat",
+    name: "微信",
+    glyph: "微",
+    color: "#34c985",
+    size: 27.8,
+    growth: 9.7,
+    budget: 20,
+    kind: "沟通协作",
+    summary: "最近群聊视频和重复下载增长明显，可先整理三个月前的大文件副本。",
+    composition: [
+      { label: "聊天图片", size: 10.4, color: "#34c985" },
+      { label: "视频", size: 9.2, color: "#6d8dff" },
+      { label: "文件", size: 5.6, color: "#f6b860" },
+      { label: "缓存", size: 2.6, color: "#3b4658" },
+    ],
   },
   {
-    id: "archive",
-    icon: "⌁",
-    title: "半年未使用的旧项目",
-    detail: "压缩归档，不删除原始内容",
-    size: 6.8,
-    tag: "建议压缩",
-    tone: "review",
-    selected: false,
+    id: "xcode",
+    name: "Xcode",
+    glyph: "X",
+    color: "#2fa8ff",
+    size: 21.4,
+    growth: 3.5,
+    budget: 25,
+    kind: "开发工具",
+    summary: "空间仍在预算内，主要由模拟器和 DerivedData 构成，可按项目使用时间分批处理。",
+    composition: [
+      { label: "模拟器", size: 8.8, color: "#2fa8ff" },
+      { label: "构建缓存", size: 7.1, color: "#6d8dff" },
+      { label: "归档", size: 3.4, color: "#9a72ff" },
+      { label: "其他", size: 2.1, color: "#3b4658" },
+    ],
   },
   {
-    id: "cloud",
-    icon: "☁",
-    title: "已同步到云端的大视频",
-    detail: "仅释放本地副本，云端文件会保留",
-    size: 12.4,
-    tag: "建议迁移",
-    tone: "move",
-    selected: true,
+    id: "lark",
+    name: "飞书",
+    glyph: "飞",
+    color: "#5877ff",
+    size: 9.6,
+    growth: 1.2,
+    budget: 10,
+    kind: "办公协作",
+    summary: "接近预算上限，会议回放缓存与重复附件可安全释放约 2.1 GB。",
+    composition: [
+      { label: "会议缓存", size: 4.2, color: "#5877ff" },
+      { label: "附件", size: 2.8, color: "#6d8dff" },
+      { label: "图片", size: 1.7, color: "#48d597" },
+      { label: "其他", size: 0.9, color: "#3b4658" },
+    ],
   },
 ];
 
-const appRows = [
-  { name: "微信", note: "图片缓存与重复视频", size: "12.8 GB", color: "#7ac7a5" },
-  { name: "剪映", note: "代理文件与已导出视频", size: "9.4 GB", color: "#ffb276" },
-  { name: "飞书", note: "会议缓存与下载附件", size: "4.7 GB", color: "#83a8e8" },
+const planActions: PlanAction[] = [
+  { id: "preview", title: "过期预览缓存", detail: "30 天未访问，可由剪映重新生成", size: 8.2, risk: "安全" },
+  { id: "proxy", title: "已关闭项目代理文件", detail: "对应原始素材仍在本地", size: 5.4, risk: "安全" },
+  { id: "thumb", title: "缩略图与波形缓存", detail: "下次打开项目时自动重建", size: 3.1, risk: "安全" },
+  { id: "export", title: "重复导出的视频", detail: "内容相同，但需要你确认保留版本", size: 2.7, risk: "需确认" },
 ];
+
+const navItems: { id: NavId; icon: string; label: string }[] = [
+  { id: "overview", icon: "⌂", label: "总览" },
+  { id: "changes", icon: "↗", label: "空间变化" },
+  { id: "budgets", icon: "◎", label: "应用预算" },
+  { id: "investigate", icon: "✦", label: "AI 调查" },
+  { id: "vault", icon: "↶", label: "安全恢复" },
+];
+
+const timeline = [
+  { time: "14:32", app: "剪映", note: "生成 4K 预览缓存", size: "+6.8 GB", tone: "purple" },
+  { time: "12:18", app: "微信", note: "群聊接收 17 个视频", size: "+3.4 GB", tone: "green" },
+  { time: "10:46", app: "Xcode", note: "新增 iOS 模拟器", size: "+2.1 GB", tone: "blue" },
+  { time: "09:25", app: "飞书", note: "会议回放离线缓存", size: "+1.2 GB", tone: "indigo" },
+];
+
+function AppBadge({ app, small = false }: { app: AppRecord; small?: boolean }) {
+  return (
+    <span
+      className={small ? "app-badge app-badge-small" : "app-badge"}
+      style={{ "--app-color": app.color } as React.CSSProperties}
+      aria-hidden="true"
+    >
+      {app.glyph}
+    </span>
+  );
+}
 
 export default function Home() {
-  const [active, setActive] = useState("home");
-  const [goal, setGoal] = useState("帮我安全释放 30 GB，不要动工作文件和家庭照片");
-  const [generated, setGenerated] = useState(false);
-  const [items, setItems] = useState(initialPlan);
-  const [drawer, setDrawer] = useState<PlanItem | null>(null);
-  const [cleaned, setCleaned] = useState(false);
+  const [active, setActive] = useState<NavId>("overview");
+  const [selectedId, setSelectedId] = useState<AppId>("capcut");
+  const [scanState, setScanState] = useState<"idle" | "scanning" | "done">("idle");
+  const [scanProgress, setScanProgress] = useState(0);
+  const [planOpen, setPlanOpen] = useState(false);
+  const [selectedActions, setSelectedActions] = useState<string[]>(["preview", "proxy", "thumb"]);
+  const [vaultItems, setVaultItems] = useState(0);
+  const [restored, setRestored] = useState(false);
+  const [query, setQuery] = useState("为什么今天突然多了 31 GB？找出来源，但先不要删除");
+  const [investigated, setInvestigated] = useState(false);
+  const [budgets, setBudgets] = useState<Record<AppId, number>>({
+    capcut: 30,
+    wechat: 20,
+    xcode: 25,
+    lark: 10,
+  });
 
-  const selectedSize = useMemo(
-    () => items.filter((item) => item.selected).reduce((sum, item) => sum + item.size, 0),
-    [items],
+  const selectedApp = apps.find((app) => app.id === selectedId) ?? apps[0];
+  const planTotal = useMemo(
+    () => planActions.filter((action) => selectedActions.includes(action.id)).reduce((sum, action) => sum + action.size, 0),
+    [selectedActions],
   );
 
-  function buildPlan() {
-    setGenerated(true);
-    setCleaned(false);
+  useEffect(() => {
+    if (scanState !== "scanning") return;
+    const timer = window.setInterval(() => {
+      setScanProgress((current) => {
+        if (current >= 100) {
+          window.clearInterval(timer);
+          setScanState("done");
+          return 100;
+        }
+        return Math.min(current + 4, 100);
+      });
+    }, 55);
+    return () => window.clearInterval(timer);
+  }, [scanState]);
+
+  function startScan() {
+    setScanProgress(0);
+    setScanState("scanning");
   }
 
-  function toggleItem(id: string) {
-    setItems((current) =>
-      current.map((item) => (item.id === id ? { ...item, selected: !item.selected } : item)),
-    );
+  function submitInvestigation() {
+    setInvestigated(false);
+    window.setTimeout(() => setInvestigated(true), 550);
   }
 
-  function confirmClean() {
-    setCleaned(true);
-    setActive("recovery");
+  function confirmPlan() {
+    setVaultItems((current) => current + 1);
+    setRestored(false);
+    setPlanOpen(false);
+    setActive("vault");
+  }
+
+  function selectApp(id: AppId) {
+    setSelectedId(id);
   }
 
   return (
-    <main className="desktop-app">
+    <main className="desktop-shell">
       <aside className="sidebar">
+        <div className="window-controls" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+        </div>
+
         <div className="brand">
-          <span className="brand-mark">轻</span>
+          <span className="brand-mark">Q</span>
           <div>
             <strong>轻盘</strong>
-            <small>AI 空间管家</small>
+            <small>SPACE FIREWALL</small>
           </div>
         </div>
 
-        <nav aria-label="产品导航">
-          {[
-            ["home", "⌂", "首页"],
-            ["tasks", "✦", "智能方案"],
-            ["files", "▤", "文件整理"],
-            ["apps", "◫", "应用空间"],
-            ["recovery", "↶", "安全恢复"],
-          ].map(([id, icon, label]) => (
+        <nav className="primary-nav" aria-label="主导航">
+          <p className="nav-caption">工作台</p>
+          {navItems.map((item) => (
             <button
-              key={id}
-              className={active === id ? "nav-item active" : "nav-item"}
-              onClick={() => setActive(id)}
+              type="button"
+              key={item.id}
+              className={active === item.id ? "nav-item active" : "nav-item"}
+              onClick={() => setActive(item.id)}
             >
-              <span>{icon}</span>
-              {label}
-              {id === "recovery" && cleaned && <i>1</i>}
+              <span className="nav-icon">{item.icon}</span>
+              <span>{item.label}</span>
+              {item.id === "vault" && vaultItems > 0 && <em>{vaultItems}</em>}
             </button>
           ))}
         </nav>
 
         <div className="sidebar-bottom">
-          <div className="privacy-pill">
-            <span>●</span>
-            本地分析，文件不上传
+          <div className="local-status">
+            <span className="status-orb">✓</span>
+            <div>
+              <b>本地保护已开启</b>
+              <small>文件内容不会上传</small>
+            </div>
           </div>
-          <button className="settings-link">⚙ 设置与保护规则</button>
+          <button type="button" className="nav-item" onClick={() => setActive("settings")}>
+            <span className="nav-icon">⚙</span>
+            <span>设置</span>
+          </button>
         </div>
       </aside>
 
-      <section className="workspace">
+      <section className="center-pane">
         <header className="topbar">
-          <div className="device">
-            <span className="device-dot" />
-            邓皓阳的 MacBook Pro
+          <div className="device-status">
+            <span />
+            MacBook Pro · 在线
           </div>
           <div className="top-actions">
-            <button aria-label="通知">◌</button>
+            <span className="demo-badge">前端演示模式</span>
+            <button type="button" className="icon-button" aria-label="通知">◌</button>
             <span className="avatar">D</span>
           </div>
         </header>
 
-        {active === "home" && (
-          <div className="page home-page">
-            <div className="welcome-row">
-              <div>
-                <p className="eyebrow">下午好，皓阳</p>
-                <h1>今天想让电脑<br />轻一点吗？</h1>
-                <p className="lead">告诉我你的空间目标，我会给你一套安全方案。</p>
-              </div>
-              <div className="storage-orbit" aria-label="磁盘已使用 81%">
-                <div className="orbit-ring">
-                  <div className="orbit-center">
-                    <strong>81%</strong>
-                    <span>已使用</span>
-                  </div>
-                </div>
-                <div className="storage-copy">
-                  <b>96 GB</b>
-                  <span>剩余空间</span>
-                </div>
-              </div>
-            </div>
-
-            <section className="ai-command">
-              <div className="ai-command-head">
-                <span className="spark">✦</span>
-                <div>
-                  <b>AI 帮我规划空间</b>
-                  <span>不用研究哪些能删，直接说出你的目标</span>
-                </div>
-              </div>
-              <div className="command-box">
-                <textarea
-                  value={goal}
-                  onChange={(event) => setGoal(event.target.value)}
-                  aria-label="输入空间清理目标"
-                />
-                <button onClick={buildPlan}>生成方案 <span>→</span></button>
-              </div>
-              <div className="quick-prompts">
-                {["安全释放 20 GB", "清理微信和飞书", "整理下载文件夹", "找出重复视频"].map(
-                  (prompt) => (
-                    <button key={prompt} onClick={() => setGoal(prompt)}>
-                      {prompt}
-                    </button>
-                  ),
-                )}
-              </div>
-            </section>
-
-            {!generated ? (
-              <section className="overview-grid">
-                <div className="insight-card">
-                  <div className="section-head">
-                    <div>
-                      <p className="eyebrow">空间观察</p>
-                      <h2>主要空间去了哪里</h2>
-                    </div>
-                    <button onClick={() => setActive("apps")}>查看全部</button>
-                  </div>
-                  <div className="app-list">
-                    {appRows.map((app) => (
-                      <div className="app-row" key={app.name}>
-                        <span className="app-icon" style={{ background: app.color }}>{app.name[0]}</span>
-                        <div>
-                          <b>{app.name}</b>
-                          <small>{app.note}</small>
-                        </div>
-                        <strong>{app.size}</strong>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="suggestion-card">
-                  <span className="suggestion-icon">✦</span>
-                  <p className="eyebrow">今日建议</p>
-                  <h2>剪映产生了<br />6.3 GB 代理文件</h2>
-                  <p>删除后不会影响原始素材和已导出视频。</p>
-                  <button onClick={buildPlan}>加入空间方案</button>
-                </div>
-              </section>
-            ) : (
-              <PlanPanel
-                items={items}
-                selectedSize={selectedSize}
-                onToggle={toggleItem}
-                onDetails={setDrawer}
-                onConfirm={confirmClean}
-              />
-            )}
-          </div>
-        )}
-
-        {active === "tasks" && (
-          <div className="page simple-page">
-            <p className="eyebrow">AI 空间方案</p>
-            <h1>用目标代替工具</h1>
-            <p className="lead">选择一个任务，AI会组合删除、压缩和迁移来完成。</p>
-            <div className="task-grid">
-              {[
-                ["30 GB", "快速腾出空间", "综合清理、压缩与迁移", "最常用"],
-                ["微信", "整理聊天文件", "区分聊天记录、缓存和重复视频", "国产应用"],
-                ["下载", "收拾下载目录", "找出安装包、重复项和旧文件", "简单"],
-                ["项目", "归档旧工作", "压缩半年未使用的项目文件", "安全"],
-              ].map(([icon, title, desc, tag]) => (
-                <button
-                  className="task-card"
-                  key={title}
-                  onClick={() => {
-                    setGoal(title === "快速腾出空间" ? "帮我安全释放 30 GB" : title);
-                    setGenerated(true);
-                    setActive("home");
-                  }}
-                >
-                  <span>{icon}</span>
-                  <i>{tag}</i>
-                  <h3>{title}</h3>
-                  <p>{desc}</p>
-                  <b>开始规划 →</b>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {active === "files" && (
-          <div className="page simple-page">
-            <p className="eyebrow">文件整理</p>
-            <h1>不只看大小，也看价值</h1>
-            <p className="lead">AI结合位置、来源和使用时间，帮你理解每一类文件。</p>
-            <div className="file-layout">
-              <div className="treemap" aria-label="磁盘空间分布示意图">
-                <div className="tree-cell cell-video">视频 <b>42 GB</b></div>
-                <div className="tree-cell cell-work">工作项目 <b>28 GB</b></div>
-                <div className="tree-cell cell-chat">聊天文件 <b>21 GB</b></div>
-                <div className="tree-cell cell-app">应用数据 <b>18 GB</b></div>
-                <div className="tree-cell cell-other">其他 <b>12 GB</b></div>
-              </div>
-              <div className="plain-explain">
-                <span>✦ AI 发现</span>
-                <h2>最大的文件不一定最该删</h2>
-                <p>“工作项目”虽然占用 28 GB，但最近仍在使用；聊天缓存体积更小，却更适合优先处理。</p>
-                <button onClick={() => { setGenerated(true); setActive("home"); }}>生成安全方案</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {active === "apps" && (
-          <div className="page simple-page">
-            <p className="eyebrow">应用空间</p>
-            <h1>看懂每个应用占了什么</h1>
-            <p className="lead">区分真正的个人数据和可以重新生成的缓存。</p>
-            <div className="apps-table">
-              {appRows.concat([
-                { name: "Chrome", note: "网页缓存与下载记录", size: "4.1 GB", color: "#e9c766" },
-                { name: "WPS", note: "历史版本与云文档副本", size: "3.6 GB", color: "#ef8585" },
-              ]).map((app, index) => (
-                <div className="apps-table-row" key={app.name}>
-                  <span className="app-icon" style={{ background: app.color }}>{app.name[0]}</span>
-                  <div><b>{app.name}</b><small>{app.note}</small></div>
-                  <span className="space-bar"><i style={{ width: `${90 - index * 13}%` }} /></span>
-                  <strong>{app.size}</strong>
-                  <button onClick={() => { setGenerated(true); setActive("home"); }}>分析</button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {active === "recovery" && (
-          <div className="page simple-page">
-            <p className="eyebrow">安全恢复</p>
-            <h1>{cleaned ? "清理完成，随时可以反悔" : "所有操作都留有退路"}</h1>
-            <p className="lead">文件会在安全区保留7天，到期前不会永久删除。</p>
-            <div className={cleaned ? "recovery-card has-files" : "recovery-card"}>
-              <span className="vault-icon">↶</span>
-              <div>
-                <b>{cleaned ? `${selectedSize.toFixed(1)} GB 已移入安全区` : "安全区目前是空的"}</b>
-                <p>{cleaned ? "来自刚刚完成的空间方案 · 7月20日 14:32" : "清理后的文件会显示在这里"}</p>
-              </div>
-              {cleaned && (
-                <div className="recovery-actions">
-                  <button>查看文件</button>
-                  <button className="restore-btn" onClick={() => setCleaned(false)}>全部恢复</button>
-                </div>
-              )}
-            </div>
-            <div className="safety-promise">
-              <div><span>01</span><b>保留原始路径</b><p>恢复后回到原来的位置。</p></div>
-              <div><span>02</span><b>7天反悔时间</b><p>到期前不会永久删除。</p></div>
-              <div><span>03</span><b>AI无权清空</b><p>永久删除只能由你确认。</p></div>
-            </div>
-          </div>
-        )}
+        <div className="content-scroll">
+          {active === "overview" && (
+            <Overview
+              scanState={scanState}
+              scanProgress={scanProgress}
+              onScan={startScan}
+              onNavigate={setActive}
+              onSelectApp={selectApp}
+              onPlan={() => setPlanOpen(true)}
+            />
+          )}
+          {active === "changes" && <Changes onSelectApp={selectApp} />}
+          {active === "budgets" && (
+            <Budgets budgets={budgets} onChange={(id, value) => setBudgets((current) => ({ ...current, [id]: value }))} />
+          )}
+          {active === "investigate" && (
+            <Investigation
+              query={query}
+              investigated={investigated}
+              onChange={setQuery}
+              onSubmit={submitInvestigation}
+              onPlan={() => setPlanOpen(true)}
+            />
+          )}
+          {active === "vault" && (
+            <Vault
+              items={vaultItems}
+              restored={restored}
+              onRestore={() => {
+                setRestored(true);
+                setVaultItems(0);
+              }}
+            />
+          )}
+          {active === "settings" && <Settings />}
+        </div>
       </section>
 
-      {drawer && (
-        <div className="drawer-backdrop" onClick={() => setDrawer(null)}>
-          <aside className="detail-drawer" onClick={(event) => event.stopPropagation()}>
-            <button className="drawer-close" onClick={() => setDrawer(null)}>×</button>
-            <span className={`detail-icon ${drawer.tone}`}>{drawer.icon}</span>
-            <p className="eyebrow">{drawer.tag}</p>
-            <h2>{drawer.title}</h2>
-            <strong className="detail-size">{drawer.size} GB</strong>
-            <div className="explanation">
-              <span>✦ AI 解释</span>
-              <p>
-                {drawer.id === "cache"
-                  ? "这些是应用为了加快打开速度生成的临时文件。删除后不会影响聊天记录或个人文档，需要时应用会重新生成。"
-                  : drawer.id === "cloud"
-                    ? "这些视频已经完整同步到云端。操作只释放本地副本，之后仍可在云盘中查看或重新下载。"
-                    : "这些文件需要你确认。系统会展示来源、最近使用时间和预览，不会自动删除个人内容。"}
-              </p>
-            </div>
-            <div className="detail-facts">
-              <div><span>处理方式</span><b>{drawer.tone === "move" ? "仅释放本地副本" : "移入7天安全区"}</b></div>
-              <div><span>删除风险</span><b>{drawer.tone === "safe" ? "低" : "需要确认"}</b></div>
-              <div><span>是否可恢复</span><b>可以</b></div>
-            </div>
-            <button className="primary-wide" onClick={() => setDrawer(null)}>明白了</button>
-          </aside>
+      <Inspector app={selectedApp} budget={budgets[selectedApp.id]} onPlan={() => setPlanOpen(true)} onInvestigate={() => setActive("investigate")} />
+
+      {scanState === "scanning" && (
+        <div className="scan-toast" role="status">
+          <div className="scan-orbit"><span>{scanProgress}%</span></div>
+          <div>
+            <b>正在建立空间变化索引</b>
+            <p>只读取文件元信息，不上传文件内容</p>
+            <div className="scan-track"><i style={{ width: `${scanProgress}%` }} /></div>
+          </div>
         </div>
+      )}
+
+      {scanState === "done" && (
+        <button type="button" className="done-toast" onClick={() => setScanState("idle")}>
+          <span>✓</span>
+          扫描完成：发现 21.4 GB 可安全释放
+          <i>×</i>
+        </button>
+      )}
+
+      {planOpen && (
+        <PlanModal
+          selected={selectedActions}
+          total={planTotal}
+          onToggle={(id) =>
+            setSelectedActions((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])
+          }
+          onClose={() => setPlanOpen(false)}
+          onConfirm={confirmPlan}
+        />
       )}
     </main>
   );
 }
 
-function PlanPanel({
-  items,
-  selectedSize,
+function Overview({
+  scanState,
+  scanProgress,
+  onScan,
+  onNavigate,
+  onSelectApp,
+  onPlan,
+}: {
+  scanState: "idle" | "scanning" | "done";
+  scanProgress: number;
+  onScan: () => void;
+  onNavigate: (id: NavId) => void;
+  onSelectApp: (id: AppId) => void;
+  onPlan: () => void;
+}) {
+  return (
+    <div className="page">
+      <div className="page-heading">
+        <div>
+          <p className="eyebrow">空间总览 · 今天</p>
+          <h1>下午好，皓阳</h1>
+          <p>电脑空间正在快速变化，轻盘已经找到了原因。</p>
+        </div>
+        <button type="button" className="primary-button" onClick={onScan} disabled={scanState === "scanning"}>
+          <span>{scanState === "scanning" ? `${scanProgress}%` : "⌁"}</span>
+          {scanState === "scanning" ? "正在扫描" : scanState === "done" ? "重新扫描" : "开始扫描"}
+        </button>
+      </div>
+
+      <section className="storage-card">
+        <div className="storage-copy">
+          <p>Macintosh HD</p>
+          <strong>96 <span>GB 可用</span></strong>
+          <small>共 512 GB · 已使用 81%</small>
+        </div>
+        <div className="storage-visual" aria-label="磁盘空间组成">
+          <div className="storage-bar">
+            <i className="storage-apps" />
+            <i className="storage-files" />
+            <i className="storage-system" />
+            <i className="storage-free" />
+          </div>
+          <div className="storage-legend">
+            <span><i className="dot-apps" />应用 128 GB</span>
+            <span><i className="dot-files" />个人文件 174 GB</span>
+            <span><i className="dot-system" />系统 114 GB</span>
+            <span><i className="dot-free" />可用 96 GB</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="metric-grid">
+        <Metric label="24 小时增长" value="+31.6" unit="GB" note="比日常高 4.2 倍" tone="danger" icon="↗" />
+        <Metric label="预计用满" value="2.8" unit="天" note="按当前速度计算" tone="warning" icon="◷" />
+        <Metric label="可安全释放" value="21.4" unit="GB" note="不影响原文件" tone="safe" icon="✓" />
+      </section>
+
+      <section className="section-block">
+        <div className="section-title">
+          <div>
+            <p className="eyebrow">增长排行</p>
+            <h2>谁在占用新空间</h2>
+          </div>
+          <button type="button" className="text-button" onClick={() => onNavigate("changes")}>查看完整变化 →</button>
+        </div>
+        <div className="growth-list">
+          {apps.map((app, index) => {
+            const ratio = Math.min((app.growth / 18.4) * 100, 100);
+            return (
+              <button type="button" className="growth-row" key={app.id} onClick={() => onSelectApp(app.id)}>
+                <span className="rank">{String(index + 1).padStart(2, "0")}</span>
+                <AppBadge app={app} small />
+                <span className="growth-name"><b>{app.name}</b><small>{app.kind}</small></span>
+                <span className="mini-track"><i style={{ width: `${ratio}%`, background: app.color }} /></span>
+                <strong>+{app.growth} GB</strong>
+                <span className="chevron">›</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="ai-callout">
+        <span className="ai-symbol">✦</span>
+        <div>
+          <p className="eyebrow">AI 发现</p>
+          <h2>剪映在 6 小时内新增了 18.4 GB</h2>
+          <p>主要是预览缓存和已关闭项目代理文件，预计可安全释放 16.7 GB。</p>
+        </div>
+        <button type="button" className="secondary-button" onClick={onPlan}>生成处理方案</button>
+      </section>
+    </div>
+  );
+}
+
+function Metric({ label, value, unit, note, tone, icon }: { label: string; value: string; unit: string; note: string; tone: string; icon: string }) {
+  return (
+    <article className={`metric-card ${tone}`}>
+      <div className="metric-top"><span>{label}</span><i>{icon}</i></div>
+      <strong>{value} <small>{unit}</small></strong>
+      <p>{note}</p>
+    </article>
+  );
+}
+
+function Changes({ onSelectApp }: { onSelectApp: (id: AppId) => void }) {
+  return (
+    <div className="page">
+      <div className="page-heading">
+        <div><p className="eyebrow">SPACE ACTIVITY</p><h1>空间变化</h1><p>用时间线解释“空间什么时候、被谁占走了”。</p></div>
+        <div className="period-tabs"><button className="active" type="button">24 小时</button><button type="button">7 天</button><button type="button">30 天</button></div>
+      </div>
+      <section className="change-summary">
+        <div><span>今日净增长</span><strong>+31.6 GB</strong></div>
+        <div className="chart-bars" aria-label="每小时空间增长柱状图">
+          {[18, 22, 16, 24, 32, 28, 56, 42, 76, 46, 88, 35, 64, 94, 58, 46, 78, 52, 32, 44].map((height, index) => <i key={index} style={{ height: `${height}%` }} />)}
+        </div>
+        <div className="chart-axis"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>现在</span></div>
+      </section>
+      <section className="timeline-card">
+        <div className="section-title"><div><p className="eyebrow">事件记录</p><h2>今天发生了什么</h2></div><span className="live-pill">● 实时记录</span></div>
+        {timeline.map((item, index) => {
+          const app = apps[index];
+          return (
+            <button type="button" className="timeline-row" key={item.time} onClick={() => onSelectApp(app.id)}>
+              <time>{item.time}</time><span className={`timeline-dot ${item.tone}`} /><AppBadge app={app} small />
+              <span><b>{item.app}</b><small>{item.note}</small></span><strong>{item.size}</strong><i>›</i>
+            </button>
+          );
+        })}
+      </section>
+    </div>
+  );
+}
+
+function Budgets({ budgets, onChange }: { budgets: Record<AppId, number>; onChange: (id: AppId, value: number) => void }) {
+  return (
+    <div className="page">
+      <div className="page-heading">
+        <div><p className="eyebrow">APP BUDGETS</p><h1>应用空间预算</h1><p>像管理银行卡额度一样，提前限制每个应用能占多少空间。</p></div>
+        <button type="button" className="ghost-button">＋ 添加应用</button>
+      </div>
+      <section className="budget-list">
+        {apps.map((app) => {
+          const budget = budgets[app.id];
+          const over = app.size > budget;
+          const used = Math.min((app.size / budget) * 100, 100);
+          return (
+            <article className="budget-row" key={app.id}>
+              <AppBadge app={app} />
+              <div className="budget-main">
+                <div><span><b>{app.name}</b><small>{app.kind}</small></span><strong className={over ? "over" : ""}>{app.size} / {budget} GB</strong></div>
+                <div className="budget-track"><i className={over ? "over" : ""} style={{ width: `${used}%` }} /></div>
+                <div className="range-labels"><span>0 GB</span><span>{over ? `已超出 ${(app.size - budget).toFixed(1)} GB` : `剩余 ${(budget - app.size).toFixed(1)} GB`}</span><span>{budget} GB</span></div>
+              </div>
+              <div className="budget-control">
+                <button type="button" aria-label={`降低${app.name}预算`} onClick={() => onChange(app.id, Math.max(5, budget - 5))}>−</button>
+                <span>{budget} GB</span>
+                <button type="button" aria-label={`提高${app.name}预算`} onClick={() => onChange(app.id, Math.min(100, budget + 5))}>＋</button>
+              </div>
+            </article>
+          );
+        })}
+      </section>
+      <div className="rule-note"><span>⌁</span><div><b>预算不会自动删除文件</b><p>应用接近预算时，轻盘会先解释原因并生成方案，由你确认后才执行。</p></div></div>
+    </div>
+  );
+}
+
+function Investigation({
+  query,
+  investigated,
+  onChange,
+  onSubmit,
+  onPlan,
+}: {
+  query: string;
+  investigated: boolean;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+  onPlan: () => void;
+}) {
+  return (
+    <div className="page investigation-page">
+      <div className="page-heading">
+        <div><p className="eyebrow">SUBAGENT WORKSPACE</p><h1>AI 空间调查</h1><p>你只需要说问题，多个 Agent 会并行查来源、验证风险并给出证据。</p></div>
+        <span className="privacy-chip">● 本地元数据优先</span>
+      </div>
+      <section className="ask-card">
+        <div className="ask-icon">✦</div>
+        <textarea value={query} onChange={(event) => onChange(event.target.value)} aria-label="输入空间调查问题" />
+        <div className="ask-footer">
+          <span>不会直接删除 · 全程可追溯</span>
+          <button type="button" className="primary-button" onClick={onSubmit}>开始调查 <i>→</i></button>
+        </div>
+      </section>
+      <div className="prompt-chips">
+        {["最近哪个应用增长最快？", "微信有哪些大文件能处理？", "为什么系统数据这么大？"].map((prompt) => (
+          <button type="button" key={prompt} onClick={() => onChange(prompt)}>{prompt}</button>
+        ))}
+      </div>
+      <section className="agent-grid">
+        {[
+          ["01", "本地分析 Agent", "读取空间变化索引", "完成", "safe"],
+          ["02", "应用规则 Agent", "识别剪映文件用途", "完成", "safe"],
+          ["03", "Agent Reach", "核对 3 条公开资料", "完成", "blue"],
+          ["04", "安全审查 Agent", "排除工程与原素材", "通过", "safe"],
+        ].map(([id, title, note, status, tone]) => (
+          <article className="agent-card" key={id}>
+            <span>{id}</span><div><b>{title}</b><small>{note}</small></div><i className={tone}>{status}</i>
+          </article>
+        ))}
+      </section>
+      {investigated && (
+        <section className="finding-card">
+          <div className="finding-head"><span>✦</span><div><p className="eyebrow">调查结论</p><h2>31.6 GB 增长已找到 93% 的来源</h2></div><em>置信度 96%</em></div>
+          <div className="finding-breakdown">
+            <div><span>剪映预览与代理</span><b>18.4 GB</b><i style={{ width: "92%" }} /></div>
+            <div><span>微信群聊视频</span><b>9.7 GB</b><i style={{ width: "49%" }} /></div>
+            <div><span>Xcode 模拟器</span><b>3.5 GB</b><i style={{ width: "18%" }} /></div>
+          </div>
+          <div className="evidence-strip"><span>证据</span><p>文件时间戳、应用目录结构、项目引用关系与公开规则交叉验证</p><button type="button" onClick={onPlan}>生成安全方案 →</button></div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function Vault({ items, restored, onRestore }: { items: number; restored: boolean; onRestore: () => void }) {
+  return (
+    <div className="page">
+      <div className="page-heading"><div><p className="eyebrow">SAFE VAULT</p><h1>安全恢复</h1><p>处理后的文件先进入隔离区，7 天内随时一键还原。</p></div><span className="vault-count">{items} 个恢复点</span></div>
+      {items > 0 ? (
+        <section className="vault-entry">
+          <div className="vault-entry-icon">↶</div>
+          <div><p className="eyebrow">刚刚创建</p><h2>剪映空间处理</h2><p>过期预览缓存、已关闭项目代理文件、缩略图缓存</p></div>
+          <div className="vault-size"><strong>16.7 GB</strong><span>保留至 7 月 28 日</span></div>
+          <button type="button" className="secondary-button" onClick={onRestore}>全部还原</button>
+        </section>
+      ) : (
+        <section className="empty-vault">
+          <span>{restored ? "✓" : "↶"}</span>
+          <h2>{restored ? "文件已恢复到原位置" : "安全区暂无文件"}</h2>
+          <p>{restored ? "本次恢复没有覆盖任何现有文件。" : "执行方案后，文件会先在这里保留 7 天。"}</p>
+        </section>
+      )}
+      <section className="promise-grid">
+        <div><span>01</span><b>先隔离，后释放</b><p>不直接永久删除，先给你反悔时间。</p></div>
+        <div><span>02</span><b>恢复路径明确</b><p>每个文件都记录原位置和处理原因。</p></div>
+        <div><span>03</span><b>执行有日志</b><p>每一步都能追溯，不做静默操作。</p></div>
+      </section>
+    </div>
+  );
+}
+
+function Settings() {
+  return (
+    <div className="page">
+      <div className="page-heading"><div><p className="eyebrow">PREFERENCES</p><h1>设置</h1><p>控制扫描范围、隐私和安全恢复规则。</p></div></div>
+      <section className="settings-list">
+        {[
+          ["后台记录空间变化", "仅记录文件大小、路径和时间，不读取文件正文", true],
+          ["应用接近预算时提醒", "达到预算的 85% 时发送通知", true],
+          ["处理前进入安全区", "默认保留 7 天后再释放磁盘空间", true],
+          ["允许读取外接硬盘", "当前仅分析 Macintosh HD", false],
+        ].map(([title, note, enabled]) => (
+          <div className="setting-row" key={String(title)}><div><b>{title}</b><p>{note}</p></div><button type="button" className={enabled ? "switch on" : "switch"} aria-label={String(title)}><i /></button></div>
+        ))}
+      </section>
+    </div>
+  );
+}
+
+function Inspector({ app, budget, onPlan, onInvestigate }: { app: AppRecord; budget: number; onPlan: () => void; onInvestigate: () => void }) {
+  const total = app.composition.reduce((sum, item) => sum + item.size, 0);
+  const over = app.size > budget;
+  return (
+    <aside className="inspector">
+      <div className="inspector-head"><p>应用详情</p><button type="button" aria-label="更多操作">•••</button></div>
+      <div className="app-profile">
+        <AppBadge app={app} />
+        <div><h2>{app.name}</h2><p>{app.kind}</p></div>
+        <span className={over ? "risk-tag" : "safe-tag"}>{over ? "超出预算" : "预算内"}</span>
+      </div>
+      <div className="app-number">
+        <span>当前占用</span><strong>{app.size}<small> GB</small></strong>
+        <p><i>↗</i> 过去 24 小时增长 {app.growth} GB</p>
+      </div>
+      <div className="budget-meter">
+        <div><span>空间预算</span><b>{app.size} / {budget} GB</b></div>
+        <div className="budget-track"><i className={over ? "over" : ""} style={{ width: `${Math.min((app.size / budget) * 100, 100)}%` }} /></div>
+        <small>{over ? `已超出 ${(app.size - budget).toFixed(1)} GB` : `还可使用 ${(budget - app.size).toFixed(1)} GB`}</small>
+      </div>
+      <section className="composition">
+        <div className="inspector-section-title"><h3>空间组成</h3><span>{total.toFixed(1)} GB</span></div>
+        <div className="composition-bar">
+          {app.composition.map((item) => <i key={item.label} style={{ width: `${(item.size / total) * 100}%`, background: item.color }} />)}
+        </div>
+        <div className="composition-list">
+          {app.composition.map((item) => <div key={item.label}><span><i style={{ background: item.color }} />{item.label}</span><b>{item.size} GB</b></div>)}
+        </div>
+      </section>
+      <section className="ai-insight">
+        <div><span>✦</span><b>AI 结论</b><em>96% 可信</em></div>
+        <p>{app.summary}</p>
+        <button type="button" onClick={onInvestigate}>查看调查证据 →</button>
+      </section>
+      <div className="inspector-actions">
+        <button type="button" className="primary-button" onClick={onPlan}>生成处理方案</button>
+        <p><span>✓</span> 执行前可逐项确认，支持安全恢复</p>
+      </div>
+    </aside>
+  );
+}
+
+function PlanModal({
+  selected,
+  total,
   onToggle,
-  onDetails,
+  onClose,
   onConfirm,
 }: {
-  items: PlanItem[];
-  selectedSize: number;
+  selected: string[];
+  total: number;
   onToggle: (id: string) => void;
-  onDetails: (item: PlanItem) => void;
+  onClose: () => void;
   onConfirm: () => void;
 }) {
   return (
-    <section className="plan-panel">
-      <div className="plan-title">
-        <div>
-          <p className="eyebrow">✦ AI 已生成方案</p>
-          <h2>预计可以安全释放 <strong>{selectedSize.toFixed(1)} GB</strong></h2>
-          <p>工作文件和家庭照片已自动排除。</p>
+    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <section className="plan-modal" role="dialog" aria-modal="true" aria-labelledby="plan-title">
+        <header><div><p className="eyebrow">AI SAFE PLAN</p><h2 id="plan-title">剪映处理方案</h2><p>只处理可重建或已有原始副本的文件。</p></div><button type="button" onClick={onClose} aria-label="关闭">×</button></header>
+        <div className="plan-summary"><span>预计释放</span><strong>{total.toFixed(1)} GB</strong><em>风险等级：低</em></div>
+        <div className="plan-items">
+          {planActions.map((action) => {
+            const checked = selected.includes(action.id);
+            return (
+              <button type="button" className={checked ? "plan-item selected" : "plan-item"} key={action.id} onClick={() => onToggle(action.id)}>
+                <span className="checkbox">{checked ? "✓" : ""}</span>
+                <span><b>{action.title}</b><small>{action.detail}</small></span>
+                <em className={action.risk === "安全" ? "safe" : "review"}>{action.risk}</em>
+                <strong>{action.size} GB</strong>
+              </button>
+            );
+          })}
         </div>
-        <div className="risk-score"><span>低风险</span><b>安全规则已检查</b></div>
-      </div>
-
-      <div className="plan-list">
-        {items.map((item) => (
-          <div className={item.selected ? "plan-row selected" : "plan-row"} key={item.id}>
-            <button
-              className="check"
-              onClick={() => onToggle(item.id)}
-              aria-label={`${item.selected ? "取消" : "选择"}${item.title}`}
-            >
-              {item.selected ? "✓" : ""}
-            </button>
-            <span className={`plan-icon ${item.tone}`}>{item.icon}</span>
-            <div className="plan-copy">
-              <div><b>{item.title}</b><i className={item.tone}>{item.tag}</i></div>
-              <p>{item.detail}</p>
-            </div>
-            <strong className="plan-size">{item.size} GB</strong>
-            <button className="detail-link" onClick={() => onDetails(item)}>为什么？</button>
-          </div>
-        ))}
-      </div>
-
-      <div className="plan-footer">
-        <div className="vault-note"><span>↶</span><div><b>全部进入7天安全区</b><small>删错可以一键恢复</small></div></div>
-        <button className="clean-button" onClick={onConfirm}>确认处理 {selectedSize.toFixed(1)} GB <span>→</span></button>
-      </div>
-    </section>
+        <div className="plan-warning"><span>↶</span><p><b>不会立刻永久删除</b><br />文件将先进入安全区并保留 7 天，期间可一键恢复。</p></div>
+        <footer><button type="button" className="ghost-button" onClick={onClose}>暂不处理</button><button type="button" className="primary-button" disabled={selected.length === 0} onClick={onConfirm}>确认移入安全区 · {total.toFixed(1)} GB</button></footer>
+      </section>
+    </div>
   );
 }
