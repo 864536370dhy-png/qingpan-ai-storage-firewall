@@ -27,6 +27,12 @@ type PlanAction = {
   risk: "安全" | "需确认";
 };
 
+type VaultRecord = {
+  appName: string;
+  total: number;
+  actionTitles: string[];
+};
+
 const apps: AppRecord[] = [
   {
     id: "capcut",
@@ -98,12 +104,36 @@ const apps: AppRecord[] = [
   },
 ];
 
-const planActions: PlanAction[] = [
-  { id: "preview", title: "过期预览缓存", detail: "30 天未访问，可由剪映重新生成", size: 8.2, risk: "安全" },
-  { id: "proxy", title: "已关闭项目代理文件", detail: "对应原始素材仍在本地", size: 5.4, risk: "安全" },
-  { id: "thumb", title: "缩略图与波形缓存", detail: "下次打开项目时自动重建", size: 3.1, risk: "安全" },
-  { id: "export", title: "重复导出的视频", detail: "内容相同，但需要你确认保留版本", size: 2.7, risk: "需确认" },
-];
+const planActionsByApp: Record<AppId, PlanAction[]> = {
+  capcut: [
+    { id: "capcut-preview", title: "过期预览缓存", detail: "30 天未访问，可由剪映重新生成", size: 8.2, risk: "安全" },
+    { id: "capcut-proxy", title: "已关闭项目代理文件", detail: "对应原始素材仍在本地", size: 5.4, risk: "安全" },
+    { id: "capcut-thumb", title: "缩略图与波形缓存", detail: "下次打开项目时自动重建", size: 3.1, risk: "安全" },
+    { id: "capcut-export", title: "重复导出的视频", detail: "内容相同，但需要你确认保留版本", size: 2.7, risk: "需确认" },
+  ],
+  wechat: [
+    { id: "wechat-video", title: "三个月前的群聊视频", detail: "聊天记录仍保留，仅移走本地大文件副本", size: 4.8, risk: "安全" },
+    { id: "wechat-duplicate", title: "重复下载的文件", detail: "按文件内容校验，保留最新的一份", size: 2.6, risk: "安全" },
+    { id: "wechat-cache", title: "图片缩略图与临时缓存", detail: "再次浏览聊天时可以自动生成", size: 1.2, risk: "安全" },
+    { id: "wechat-original", title: "长期未打开的原始视频", detail: "可能仍有价值，需要你逐个确认", size: 1.7, risk: "需确认" },
+  ],
+  xcode: [
+    { id: "xcode-derived", title: "DerivedData 构建缓存", detail: "重新编译项目时会自动生成", size: 5.8, risk: "安全" },
+    { id: "xcode-simulator", title: "不再使用的模拟器", detail: "未被近期项目引用的旧系统版本", size: 3.4, risk: "安全" },
+    { id: "xcode-support", title: "旧设备支持文件", detail: "90 天未连接过对应系统设备", size: 2.2, risk: "安全" },
+    { id: "xcode-archive", title: "历史发布归档", detail: "可能用于崩溃符号化，需要你确认", size: 2.8, risk: "需确认" },
+  ],
+  lark: [
+    { id: "lark-meeting", title: "会议回放缓存", detail: "云端回放仍保留，可按需重新加载", size: 2.1, risk: "安全" },
+    { id: "lark-duplicate", title: "重复下载的附件", detail: "保留最近打开的一份本地文件", size: 1.4, risk: "安全" },
+    { id: "lark-image", title: "图片缩略图缓存", detail: "不影响聊天中的原始图片", size: 0.8, risk: "安全" },
+    { id: "lark-download", title: "长期未打开的下载文件", detail: "可能是工作资料，需要你确认", size: 0.9, risk: "需确认" },
+  ],
+};
+
+function defaultSelectedActions(id: AppId) {
+  return planActionsByApp[id].filter((action) => action.risk === "安全").map((action) => action.id);
+}
 
 const navItems: { id: NavId; icon: string; label: string }[] = [
   { id: "overview", icon: "⌂", label: "总览" },
@@ -138,8 +168,8 @@ export default function Home() {
   const [scanState, setScanState] = useState<"idle" | "scanning" | "done">("idle");
   const [scanProgress, setScanProgress] = useState(0);
   const [planOpen, setPlanOpen] = useState(false);
-  const [selectedActions, setSelectedActions] = useState<string[]>(["preview", "proxy", "thumb"]);
-  const [vaultItems, setVaultItems] = useState(0);
+  const [selectedActions, setSelectedActions] = useState<string[]>(defaultSelectedActions("capcut"));
+  const [vaultRecord, setVaultRecord] = useState<VaultRecord | null>(null);
   const [restored, setRestored] = useState(false);
   const [theme, setTheme] = useState<Theme>("dark");
   const [query, setQuery] = useState("为什么今天突然多了 31 GB？找出来源，但先不要删除");
@@ -152,9 +182,10 @@ export default function Home() {
   });
 
   const selectedApp = apps.find((app) => app.id === selectedId) ?? apps[0];
+  const currentPlanActions = planActionsByApp[selectedId];
   const planTotal = useMemo(
-    () => planActions.filter((action) => selectedActions.includes(action.id)).reduce((sum, action) => sum + action.size, 0),
-    [selectedActions],
+    () => currentPlanActions.filter((action) => selectedActions.includes(action.id)).reduce((sum, action) => sum + action.size, 0),
+    [currentPlanActions, selectedActions],
   );
 
   useEffect(() => {
@@ -196,7 +227,11 @@ export default function Home() {
   }
 
   function confirmPlan() {
-    setVaultItems((current) => current + 1);
+    setVaultRecord({
+      appName: selectedApp.name,
+      total: planTotal,
+      actionTitles: currentPlanActions.filter((action) => selectedActions.includes(action.id)).map((action) => action.title),
+    });
     setRestored(false);
     setPlanOpen(false);
     setActive("vault");
@@ -204,6 +239,9 @@ export default function Home() {
 
   function selectApp(id: AppId) {
     setSelectedId(id);
+    setSelectedActions(defaultSelectedActions(id));
+    const app = apps.find((item) => item.id === id);
+    if (app) setQuery(`分析${app.name}最近为什么占用变大，找出可以安全处理的内容，但先不要删除`);
   }
 
   return (
@@ -234,7 +272,7 @@ export default function Home() {
             >
               <span className="nav-icon">{item.icon}</span>
               <span>{item.label}</span>
-              {item.id === "vault" && vaultItems > 0 && <em>{vaultItems}</em>}
+              {item.id === "vault" && vaultRecord && <em>1</em>}
             </button>
           ))}
         </nav>
@@ -302,6 +340,8 @@ export default function Home() {
           )}
           {active === "investigate" && (
             <Investigation
+              app={selectedApp}
+              actions={currentPlanActions}
               query={query}
               investigated={investigated}
               onChange={setQuery}
@@ -311,11 +351,11 @@ export default function Home() {
           )}
           {active === "vault" && (
             <Vault
-              items={vaultItems}
+              record={vaultRecord}
               restored={restored}
               onRestore={() => {
                 setRestored(true);
-                setVaultItems(0);
+                setVaultRecord(null);
               }}
             />
           )}
@@ -346,6 +386,8 @@ export default function Home() {
 
       {planOpen && (
         <PlanModal
+          app={selectedApp}
+          actions={currentPlanActions}
           selected={selectedActions}
           total={planTotal}
           onToggle={(id) =>
@@ -529,18 +571,25 @@ function Budgets({ budgets, onChange }: { budgets: Record<AppId, number>; onChan
 }
 
 function Investigation({
+  app,
+  actions,
   query,
   investigated,
   onChange,
   onSubmit,
   onPlan,
 }: {
+  app: AppRecord;
+  actions: PlanAction[];
   query: string;
   investigated: boolean;
   onChange: (value: string) => void;
   onSubmit: () => void;
   onPlan: () => void;
 }) {
+  const findings = actions.slice(0, 3);
+  const largestFinding = Math.max(...findings.map((action) => action.size));
+
   return (
     <div className="page investigation-page">
       <div className="page-heading">
@@ -556,16 +605,16 @@ function Investigation({
         </div>
       </section>
       <div className="prompt-chips">
-        {["最近哪个应用增长最快？", "微信有哪些大文件能处理？", "为什么系统数据这么大？"].map((prompt) => (
+        {[`${app.name}有哪些内容能安全处理？`, `${app.name}为什么突然变大？`, "为什么系统数据这么大？"].map((prompt) => (
           <button type="button" key={prompt} onClick={() => onChange(prompt)}>{prompt}</button>
         ))}
       </div>
       <section className="agent-grid">
         {[
           ["01", "本地分析 Agent", "读取空间变化索引", "完成", "safe"],
-          ["02", "应用规则 Agent", "识别剪映文件用途", "完成", "safe"],
+          ["02", "应用规则 Agent", `识别${app.name}文件用途`, "完成", "safe"],
           ["03", "Agent Reach", "核对 3 条公开资料", "完成", "blue"],
-          ["04", "安全审查 Agent", "排除工程与原素材", "通过", "safe"],
+          ["04", "安全审查 Agent", "排除关键文件与原始内容", "通过", "safe"],
         ].map(([id, title, note, status, tone]) => (
           <article className="agent-card" key={id}>
             <span>{id}</span><div><b>{title}</b><small>{note}</small></div><i className={tone}>{status}</i>
@@ -574,11 +623,15 @@ function Investigation({
       </section>
       {investigated && (
         <section className="finding-card">
-          <div className="finding-head"><span>✦</span><div><p className="eyebrow">调查结论</p><h2>31.6 GB 增长已找到 93% 的来源</h2></div><em>置信度 96%</em></div>
+          <div className="finding-head"><span>✦</span><div><p className="eyebrow">调查结论</p><h2>{app.name}新增 {app.growth} GB 的来源已确认</h2></div><em>置信度 96%</em></div>
           <div className="finding-breakdown">
-            <div><span>剪映预览与代理</span><b>18.4 GB</b><i style={{ width: "92%" }} /></div>
-            <div><span>微信群聊视频</span><b>9.7 GB</b><i style={{ width: "49%" }} /></div>
-            <div><span>Xcode 模拟器</span><b>3.5 GB</b><i style={{ width: "18%" }} /></div>
+            {findings.map((action) => (
+              <div key={action.id}>
+                <span>{action.title}</span>
+                <b>{action.size} GB</b>
+                <i style={{ width: `${Math.max((action.size / largestFinding) * 100, 12)}%` }} />
+              </div>
+            ))}
           </div>
           <div className="evidence-strip"><span>证据</span><p>文件时间戳、应用目录结构、项目引用关系与公开规则交叉验证</p><button type="button" onClick={onPlan}>生成安全方案 →</button></div>
         </section>
@@ -587,15 +640,15 @@ function Investigation({
   );
 }
 
-function Vault({ items, restored, onRestore }: { items: number; restored: boolean; onRestore: () => void }) {
+function Vault({ record, restored, onRestore }: { record: VaultRecord | null; restored: boolean; onRestore: () => void }) {
   return (
     <div className="page">
-      <div className="page-heading"><div><p className="eyebrow">SAFE VAULT</p><h1>安全恢复</h1><p>处理后的文件先进入隔离区，7 天内随时一键还原。</p></div><span className="vault-count">{items} 个恢复点</span></div>
-      {items > 0 ? (
+      <div className="page-heading"><div><p className="eyebrow">SAFE VAULT</p><h1>安全恢复</h1><p>处理后的文件先进入隔离区，7 天内随时一键还原。</p></div><span className="vault-count">{record ? 1 : 0} 个恢复点</span></div>
+      {record ? (
         <section className="vault-entry">
           <div className="vault-entry-icon">↶</div>
-          <div><p className="eyebrow">刚刚创建</p><h2>剪映空间处理</h2><p>过期预览缓存、已关闭项目代理文件、缩略图缓存</p></div>
-          <div className="vault-size"><strong>16.7 GB</strong><span>保留至 7 月 28 日</span></div>
+          <div><p className="eyebrow">刚刚创建</p><h2>{record.appName}空间处理</h2><p>{record.actionTitles.join("、")}</p></div>
+          <div className="vault-size"><strong>{record.total.toFixed(1)} GB</strong><span>保留至 7 月 28 日</span></div>
           <button type="button" className="secondary-button" onClick={onRestore}>全部还原</button>
         </section>
       ) : (
@@ -675,12 +728,16 @@ function Inspector({ app, budget, onPlan, onInvestigate }: { app: AppRecord; bud
 }
 
 function PlanModal({
+  app,
+  actions,
   selected,
   total,
   onToggle,
   onClose,
   onConfirm,
 }: {
+  app: AppRecord;
+  actions: PlanAction[];
   selected: string[];
   total: number;
   onToggle: (id: string) => void;
@@ -690,10 +747,10 @@ function PlanModal({
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <section className="plan-modal" role="dialog" aria-modal="true" aria-labelledby="plan-title">
-        <header><div><p className="eyebrow">AI SAFE PLAN</p><h2 id="plan-title">剪映处理方案</h2><p>只处理可重建或已有原始副本的文件。</p></div><button type="button" onClick={onClose} aria-label="关闭">×</button></header>
+        <header><div><p className="eyebrow">AI SAFE PLAN</p><h2 id="plan-title">{app.name}处理方案</h2><p>根据 {app.name} 的文件类型生成，可逐项确认。</p></div><button type="button" onClick={onClose} aria-label="关闭">×</button></header>
         <div className="plan-summary"><span>预计释放</span><strong>{total.toFixed(1)} GB</strong><em>风险等级：低</em></div>
         <div className="plan-items">
-          {planActions.map((action) => {
+          {actions.map((action) => {
             const checked = selected.includes(action.id);
             return (
               <button type="button" className={checked ? "plan-item selected" : "plan-item"} key={action.id} onClick={() => onToggle(action.id)}>

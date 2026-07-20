@@ -50,6 +50,10 @@ test("keeps the interactive workflow and dark design tokens in source", async ()
   assert.match(page, /submitInvestigation/);
   assert.match(page, /confirmPlan/);
   assert.match(page, /PlanModal/);
+  assert.match(page, /planActionsByApp/);
+  assert.match(page, /三个月前的群聊视频/);
+  assert.match(page, /\{app\.name\}处理方案/);
+  assert.match(page, /record\.appName/);
   assert.match(page, /Agent Reach/);
   assert.match(page, /qingpan-theme/);
   assert.match(page, /界面主题/);

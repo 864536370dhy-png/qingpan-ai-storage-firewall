@@ -611,82 +611,100 @@ h1, h2, h3, p { margin-top: 0; }
 .plan-modal > footer { padding: 14px 21px; display: flex; justify-content: flex-end; gap: 9px; border-top: 1px solid var(--border); background: #0f151d; }
 
 /* Larger desktop type scale */
-.nav-item { font-size: 12px; }
-.nav-caption, .device-status, .demo-badge { font-size: 10px; }
-.local-status b { font-size: 10px; }
-.local-status small { font-size: 9px; }
-.eyebrow { font-size: 10px; }
-.page-heading > div > p:last-child { font-size: 12px; }
-.primary-button, .secondary-button, .ghost-button { min-height: 39px; font-size: 11px; }
-.text-button { font-size: 10px; }
-.storage-copy p { font-size: 11px; }
+.nav-item { min-height: 43px; font-size: 13px; }
+.nav-icon { width: 21px; font-size: 17px; }
+.nav-caption, .device-status, .demo-badge { font-size: 11px; }
+.local-status b { font-size: 11px; }
+.local-status small { font-size: 10px; }
+.status-orb { width: 28px; height: 28px; font-size: 12px; }
+.eyebrow { font-size: 11px; }
+.page-heading > div > p:last-child { font-size: 13px; }
+.primary-button, .secondary-button, .ghost-button { min-height: 41px; font-size: 12px; }
+.text-button { font-size: 11px; }
+.storage-copy p { font-size: 12px; }
 .storage-copy strong { font-size: 33px; }
-.storage-copy strong span, .storage-copy small { font-size: 10px; }
-.storage-legend span { font-size: 9px; }
-.metric-top { font-size: 10px; }
+.storage-copy strong span, .storage-copy small { font-size: 11px; }
+.storage-legend span { font-size: 10px; }
+.metric-top { font-size: 11px; }
+.metric-top i { width: 27px; height: 27px; font-size: 13px; }
 .metric-card strong { font-size: 27px; }
-.metric-card strong small { font-size: 11px; }
-.metric-card p { font-size: 9px; }
+.metric-card strong small { font-size: 12px; }
+.metric-card p { font-size: 10px; }
 .section-title h2 { font-size: 17px; }
-.growth-row { min-height: 64px; }
-.rank { font-size: 10px; }
-.growth-name b { font-size: 12px; }
-.growth-name small { font-size: 9px; }
-.growth-row > strong { font-size: 11px; }
+.app-badge { width: 46px; height: 46px; font-size: 14px; }
+.app-badge-small { width: 36px; height: 36px; font-size: 11px; }
+.growth-row { min-height: 70px; grid-template-columns: 28px 38px minmax(100px, 1fr) minmax(100px, 1.25fr) 72px 12px; }
+.rank { font-size: 11px; }
+.growth-name b { font-size: 13px; }
+.growth-name small { font-size: 11px; }
+.growth-row > strong { font-size: 13px; }
+.chevron { font-size: 20px; }
+.ai-symbol, .ask-icon { width: 42px; height: 42px; font-size: 15px; }
 .ai-callout h2 { font-size: 14px; }
-.ai-callout p:not(.eyebrow) { font-size: 10px; }
-.period-tabs button { font-size: 10px; }
-.change-summary span { font-size: 10px; }
+.ai-callout p:not(.eyebrow) { font-size: 11px; }
+.period-tabs button { min-height: 32px; font-size: 11px; }
+.change-summary span { font-size: 11px; }
 .change-summary strong { font-size: 21px; }
-.chart-axis span, .live-pill { font-size: 9px; }
-.timeline-row { min-height: 66px; }
-.timeline-row time, .timeline-row strong { font-size: 10px; }
-.timeline-row b { font-size: 11px; }
-.timeline-row small { font-size: 9px; }
-.budget-row { min-height: 112px; }
-.budget-main span b { font-size: 12px; }
-.budget-main span small { font-size: 9px; }
-.budget-main strong, .budget-control span { font-size: 10px; }
-.range-labels { font-size: 8px; }
-.rule-note b { font-size: 11px; }
-.rule-note p { font-size: 9px; }
-.privacy-chip, .vault-count { font-size: 9px; }
-.ask-card textarea { font-size: 13px; }
-.ask-footer > span, .prompt-chips button { font-size: 9px; }
-.agent-card b { font-size: 10px; }
-.agent-card small, .agent-card > i { font-size: 8px; }
+.chart-axis span, .live-pill { font-size: 10px; }
+.timeline-row { min-height: 72px; grid-template-columns: 42px 9px 38px 1fr 68px 10px; }
+.timeline-row time, .timeline-row strong { font-size: 11px; }
+.timeline-row b { font-size: 12px; }
+.timeline-row small { font-size: 10px; }
+.timeline-dot { width: 8px; height: 8px; }
+.budget-row { min-height: 118px; grid-template-columns: 48px 1fr 118px; }
+.budget-main span b { font-size: 13px; }
+.budget-main span small { font-size: 11px; }
+.budget-main strong, .budget-control span { font-size: 12px; }
+.range-labels { font-size: 10px; }
+.rule-note b { font-size: 12px; }
+.rule-note p { font-size: 11px; }
+.privacy-chip, .vault-count { font-size: 10px; }
+.ask-card textarea { font-size: 14px; }
+.ask-footer > span, .prompt-chips button { font-size: 11px; }
+.agent-card { min-height: 66px; }
+.agent-card > span { font-size: 10px; }
+.agent-card b { font-size: 12px; }
+.agent-card small, .agent-card > i { font-size: 10px; }
 .finding-head h2 { font-size: 14px; }
-.finding-head em, .finding-breakdown span, .finding-breakdown b { font-size: 9px; }
-.evidence-strip span, .evidence-strip p, .evidence-strip button { font-size: 8px; }
+.finding-head em, .finding-breakdown span, .finding-breakdown b { font-size: 11px; }
+.evidence-strip span, .evidence-strip p, .evidence-strip button { font-size: 10px; }
 .vault-entry h2 { font-size: 14px; }
-.vault-entry p:not(.eyebrow), .vault-size span { font-size: 9px; }
-.vault-size strong { font-size: 13px; }
+.vault-entry p:not(.eyebrow), .vault-size span { font-size: 11px; }
+.vault-size strong { font-size: 14px; }
+.vault-entry-icon { width: 52px; height: 52px; font-size: 22px; }
 .empty-vault h2 { font-size: 16px; }
-.empty-vault p { font-size: 10px; }
-.promise-grid b, .setting-row b { font-size: 11px; }
-.promise-grid p, .setting-row p { font-size: 9px; }
-.inspector-head p { font-size: 11px; }
+.empty-vault p { font-size: 11px; }
+.promise-grid b, .setting-row b { font-size: 12px; }
+.promise-grid p, .setting-row p { font-size: 11px; }
+.promise-grid span { font-size: 10px; }
+.inspector-head p { font-size: 12px; }
 .app-profile h2 { font-size: 17px; }
-.app-profile p, .risk-tag, .safe-tag { font-size: 9px; }
-.app-number > span { font-size: 10px; }
+.app-profile { grid-template-columns: 48px 1fr auto; }
+.app-profile p, .risk-tag, .safe-tag { font-size: 11px; }
+.app-number > span { font-size: 12px; }
 .app-number > strong { font-size: 38px; }
-.app-number > strong small { font-size: 12px; }
-.app-number p { font-size: 9px; }
-.budget-meter > div:first-child, .budget-meter > div:first-child b { font-size: 10px; }
-.budget-meter small { font-size: 8px; }
-.inspector-section-title h3 { font-size: 11px; }
-.inspector-section-title span, .composition-list > div, .composition-list b { font-size: 9px; }
-.ai-insight > div b { font-size: 10px; }
-.ai-insight > div em { font-size: 8px; }
-.ai-insight p, .ai-insight button { font-size: 9px; }
-.inspector-actions p { font-size: 8px; }
-.plan-modal > header p:last-child, .plan-summary span, .plan-summary em { font-size: 10px; }
-.plan-item b { font-size: 11px; }
-.plan-item small { font-size: 9px; }
-.plan-item em { font-size: 8px; }
-.plan-item > strong { font-size: 10px; }
-.plan-warning p { font-size: 9px; }
-.plan-warning b { font-size: 10px; }
+.app-number > strong small { font-size: 13px; }
+.app-number p { font-size: 11px; }
+.budget-meter > div:first-child, .budget-meter > div:first-child b { font-size: 12px; }
+.budget-meter small { font-size: 10px; }
+.inspector-section-title h3 { font-size: 12px; }
+.inspector-section-title span, .composition-list > div, .composition-list b { font-size: 11px; }
+.ai-insight > div b { font-size: 12px; }
+.ai-insight > div em { font-size: 10px; }
+.ai-insight p, .ai-insight button { font-size: 11px; }
+.inspector-actions p { font-size: 10px; }
+.plan-modal > header p:last-child, .plan-summary span, .plan-summary em { font-size: 11px; }
+.plan-item { min-height: 66px; }
+.plan-item b { font-size: 12px; }
+.plan-item small { font-size: 11px; }
+.plan-item em { font-size: 10px; }
+.plan-item > strong { font-size: 12px; }
+.checkbox { width: 22px; height: 22px; font-size: 11px; }
+.plan-warning > span { font-size: 20px; }
+.plan-warning p { font-size: 11px; }
+.plan-warning b { font-size: 12px; }
+.theme-switch button { font-size: 11px; }
+.icon-button, .avatar { width: 33px; height: 33px; font-size: 12px; }
 
 /* Light theme: semantic overrides */
 .desktop-shell[data-theme="light"] {
