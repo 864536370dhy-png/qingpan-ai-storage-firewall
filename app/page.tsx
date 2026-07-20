@@ -150,6 +150,21 @@ const timeline = [
   { time: "09:25", app: "飞书", note: "会议回放离线缓存", size: "+1.2 GB", tone: "indigo" },
 ];
 
+const hourlyGrowth = [
+  { time: "00:00–02:00", value: 0.7 },
+  { time: "02:00–04:00", value: 0.8 },
+  { time: "04:00–06:00", value: 1.3 },
+  { time: "06:00–08:00", value: 2.4 },
+  { time: "08:00–10:00", value: 3.1 },
+  { time: "10:00–12:00", value: 4.0 },
+  { time: "12:00–14:00", value: 2.2 },
+  { time: "14:00–16:00", value: 4.8 },
+  { time: "16:00–18:00", value: 3.0 },
+  { time: "18:00–20:00", value: 3.8 },
+  { time: "20:00–22:00", value: 2.9 },
+  { time: "22:00–现在", value: 2.6 },
+];
+
 function AppBadge({ app, small = false }: { app: AppRecord; small?: boolean }) {
   return (
     <span
@@ -514,9 +529,29 @@ function Changes({ onSelectApp }: { onSelectApp: (id: AppId) => void }) {
         <div className="period-tabs"><button className="active" type="button">24 小时</button><button type="button">7 天</button><button type="button">30 天</button></div>
       </div>
       <section className="change-summary">
-        <div><span>今日净增长</span><strong>+31.6 GB</strong></div>
+        <div className="change-summary-head">
+          <div>
+            <span>今天电脑最终多占用</span>
+            <small>今天新增的文件 − 今天删除或释放的空间</small>
+          </div>
+          <strong className="net-growth-value">+31.6 GB<small>不是当前总占用</small></strong>
+        </div>
+        <div className="chart-explainer">
+          <span><i />每根柱子代表 2 小时内新增的空间</span>
+          <em>柱子越高，表示这段时间新增文件越多</em>
+        </div>
         <div className="chart-bars" aria-label="每小时空间增长柱状图">
-          {[18, 22, 16, 24, 32, 28, 56, 42, 76, 46, 88, 35, 64, 94, 58, 46, 78, 52, 32, 44].map((height, index) => <i key={index} style={{ height: `${height}%` }} />)}
+          {hourlyGrowth.map((item) => (
+            <button
+              type="button"
+              className="chart-bar"
+              key={item.time}
+              aria-label={`${item.time} 新增 ${item.value} GB`}
+              data-value={`${item.time} · 新增 ${item.value} GB`}
+            >
+              <i style={{ height: `${(item.value / 4.8) * 100}%` }} />
+            </button>
+          ))}
         </div>
         <div className="chart-axis"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>现在</span></div>
       </section>

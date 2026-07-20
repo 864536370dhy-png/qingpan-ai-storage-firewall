@@ -54,12 +54,16 @@ test("keeps the interactive workflow and dark design tokens in source", async ()
   assert.match(page, /三个月前的群聊视频/);
   assert.match(page, /\{app\.name\}处理方案/);
   assert.match(page, /record\.appName/);
+  assert.match(page, /今天新增的文件 − 今天删除或释放的空间/);
+  assert.match(page, /不是当前总占用/);
+  assert.match(page, /hourlyGrowth/);
   assert.match(page, /Agent Reach/);
   assert.match(page, /qingpan-theme/);
   assert.match(page, /界面主题/);
   assert.match(css, /--canvas:\s*var\(--gray-1000\)/);
   assert.match(css, /grid-template-columns:\s*218px minmax\(560px,\s*1fr\) 354px/);
   assert.match(css, /\.desktop-shell\[data-theme="light"\]/);
+  assert.match(css, /\[data-theme="light"\] \.net-growth-value/);
   assert.match(css, /@media \(max-width:\s*980px\)/);
   assert.match(layout, /轻盘 · AI 空间防火墙/);
   assert.doesNotMatch(page, /SkeletonPreview/);
