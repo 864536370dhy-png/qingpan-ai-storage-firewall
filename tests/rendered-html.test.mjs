@@ -32,7 +32,7 @@ test("server-renders the QINGPAN desktop workspace", async () => {
   assert.match(html, /<title>轻盘 · AI 驱动的智能空间管理产品<\/title>/i);
   assert.match(html, /class="desktop-shell"/);
   assert.match(html, /空间变化/);
-  assert.match(html, /应用预算/);
+  assert.match(html, /占用提醒/);
   assert.match(html, /AI 调查/);
   assert.match(html, /安全恢复/);
   assert.match(html, /前端演示模式/);
@@ -64,6 +64,12 @@ test("keeps the interactive workflow and dark design tokens in source", async ()
   assert.match(page, /Agent Reach/);
   assert.match(page, /qingpan-theme/);
   assert.match(page, /界面主题/);
+  assert.match(page, /软件占用提醒/);
+  assert.match(page, /超过这个数就提醒我/);
+  assert.match(page, /让 AI 看看怎么处理/);
+  assert.match(page, /gsap\.fromTo/);
+  assert.match(css, /\.budget-guide/);
+  assert.match(css, /\.budget-cards/);
   assert.match(css, /--canvas:\s*var\(--gray-1000\)/);
   assert.match(css, /grid-template-columns:\s*218px minmax\(560px,\s*1fr\) 354px/);
   assert.match(css, /\.desktop-shell\[data-theme="light"\]/);

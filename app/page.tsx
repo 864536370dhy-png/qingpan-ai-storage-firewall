@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { gsap } from "gsap";
 
 type NavId = "overview" | "changes" | "budgets" | "investigate" | "vault" | "settings";
 type AppId = "capcut" | "wechat" | "xcode" | "lark";
@@ -139,7 +140,7 @@ function defaultSelectedActions(id: AppId) {
 const navItems: { id: NavId; icon: string; label: string }[] = [
   { id: "overview", icon: "⌂", label: "总览" },
   { id: "changes", icon: "↗", label: "空间变化" },
-  { id: "budgets", icon: "◎", label: "应用预算" },
+  { id: "budgets", icon: "◎", label: "占用提醒" },
   { id: "investigate", icon: "✦", label: "AI 调查" },
   { id: "vault", icon: "↶", label: "安全恢复" },
 ];
@@ -215,6 +216,12 @@ export default function Home() {
     wechat: 20,
     xcode: 25,
     lark: 10,
+  });
+  const [budgetAlerts, setBudgetAlerts] = useState<Record<AppId, boolean>>({
+    capcut: true,
+    wechat: true,
+    xcode: true,
+    lark: true,
   });
 
   const selectedApp = apps.find((app) => app.id === selectedId) ?? apps[0];
@@ -376,7 +383,17 @@ export default function Home() {
           )}
           {active === "changes" && <Changes onSelectApp={selectApp} />}
           {active === "budgets" && (
-            <Budgets budgets={budgets} onChange={(id, value) => setBudgets((current) => ({ ...current, [id]: value }))} />
+            <Budgets
+              budgets={budgets}
+              alerts={budgetAlerts}
+              onChange={(id, value) => setBudgets((current) => ({ ...current, [id]: value }))}
+              onToggle={(id) => setBudgetAlerts((current) => ({ ...current, [id]: !current[id] }))}
+              onInvestigate={(id) => {
+                selectApp(id);
+                setInvestigated(false);
+                setActive("investigate");
+              }}
+            />
           )}
           {active === "investigate" && (
             <Investigation
@@ -639,36 +656,123 @@ function Changes({ onSelectApp }: { onSelectApp: (id: AppId) => void }) {
   );
 }
 
-function Budgets({ budgets, onChange }: { budgets: Record<AppId, number>; onChange: (id: AppId, value: number) => void }) {
+function Budgets({
+  budgets,
+  alerts,
+  onChange,
+  onToggle,
+  onInvestigate,
+}: {
+  budgets: Record<AppId, number>;
+  alerts: Record<AppId, boolean>;
+  onChange: (id: AppId, value: number) => void;
+  onToggle: (id: AppId) => void;
+  onInvestigate: (id: AppId) => void;
+}) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const previousBudgets = useRef(budgets);
+  const overApps = apps.filter((app) => alerts[app.id] && app.size > budgets[app.id]);
+  const priorityApp = [...overApps].sort((left, right) => (right.size - budgets[right.id]) - (left.size - budgets[left.id]))[0];
+
+  useEffect(() => {
+    if (!rootRef.current || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const context = gsap.context(() => {
+      gsap.fromTo(
+        ".budget-reveal",
+        { opacity: 0, y: 12 },
+        { opacity: 1, y: 0, duration: 0.42, stagger: 0.055, ease: "power2.out" },
+      );
+    }, rootRef);
+    return () => context.revert();
+  }, []);
+
+  useEffect(() => {
+    if (!rootRef.current || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      previousBudgets.current = budgets;
+      return;
+    }
+    const changedApp = apps.find((app) => previousBudgets.current[app.id] !== budgets[app.id]);
+    if (changedApp) {
+      const target = rootRef.current.querySelector(`[data-budget-id="${changedApp.id}"] .budget-limit-value`);
+      if (target) gsap.fromTo(target, { scale: 1.16, color: "#9fb1ff" }, { scale: 1, color: "", duration: 0.32, ease: "back.out(2)" });
+    }
+    previousBudgets.current = budgets;
+  }, [budgets]);
+
   return (
-    <div className="page">
-      <div className="page-heading">
-        <div><p className="eyebrow">APP BUDGETS</p><h1>应用空间预算</h1><p>像管理银行卡额度一样，提前限制每个应用能占多少空间。</p></div>
-        <button type="button" className="ghost-button">＋ 添加应用</button>
+    <div className="page budget-page" ref={rootRef}>
+      <div className="page-heading budget-reveal">
+        <div><p className="eyebrow">SPACE ALERTS</p><h1>软件占用提醒</h1><p>给软件画一条提醒线。超过时告诉你原因，不会自动删除文件。</p></div>
+        <span className={overApps.length ? "budget-overview-chip warning" : "budget-overview-chip safe"}>
+          {overApps.length ? `${overApps.length} 个软件需要注意` : "所有软件都正常"}
+        </span>
       </div>
-      <section className="budget-list">
+
+      <section className="budget-guide budget-reveal" aria-label="占用提醒使用方法">
+        <div><span>1</span><p><b>设置提醒线</b><small>例如微信超过 30 GB</small></p></div>
+        <i>→</i>
+        <div><span>2</span><p><b>超过时通知你</b><small>先说明是谁在增长</small></p></div>
+        <i>→</i>
+        <div><span>3</span><p><b>AI 给处理方案</b><small>由你确认，不自动删除</small></p></div>
+      </section>
+
+      {priorityApp && (
+        <section className="budget-priority budget-reveal">
+          <div className="priority-icon">!</div>
+          <div>
+            <p className="eyebrow">现在最需要注意</p>
+            <h2>{priorityApp.name} 已超过提醒线 {(priorityApp.size - budgets[priorityApp.id]).toFixed(1)} GB</h2>
+            <p>当前占用 {priorityApp.size} GB，提醒线是 {budgets[priorityApp.id]} GB。先让 AI 解释哪些内容值得处理。</p>
+          </div>
+          <button type="button" className="secondary-button" onClick={() => onInvestigate(priorityApp.id)}>让 AI 看看怎么处理</button>
+        </section>
+      )}
+
+      <section className="budget-cards" aria-label="软件占用提醒列表">
         {apps.map((app) => {
           const budget = budgets[app.id];
-          const over = app.size > budget;
-          const used = Math.min((app.size / budget) * 100, 100);
+          const enabled = alerts[app.id];
+          const over = enabled && app.size > budget;
+          const scaleMax = Math.max(60, Math.ceil(Math.max(app.size, budget) / 20) * 20);
+          const used = Math.min((app.size / scaleMax) * 100, 100);
+          const marker = Math.min((budget / scaleMax) * 100, 100);
+          const difference = Math.abs(app.size - budget).toFixed(1);
           return (
-            <article className="budget-row" key={app.id}>
-              <AppBadge app={app} />
-              <div className="budget-main">
-                <div><span><b>{app.name}</b><small>{app.kind}</small></span><strong className={over ? "over" : ""}>{app.size} / {budget} GB</strong></div>
-                <div className="budget-track"><i className={over ? "over" : ""} style={{ width: `${used}%` }} /></div>
-                <div className="range-labels"><span>0 GB</span><span>{over ? `已超出 ${(app.size - budget).toFixed(1)} GB` : `剩余 ${(budget - app.size).toFixed(1)} GB`}</span><span>{budget} GB</span></div>
+            <article className={`budget-card budget-reveal ${enabled ? "" : "disabled"}`} data-budget-id={app.id} key={app.id}>
+              <header className="budget-card-head">
+                <div><AppBadge app={app} /><span><b>{app.name}</b><small>{app.kind}</small></span></div>
+                <button type="button" className={`alert-toggle ${enabled ? "on" : ""}`} onClick={() => onToggle(app.id)} aria-pressed={enabled} aria-label={`${enabled ? "关闭" : "开启"}${app.name}占用提醒`}>
+                  <i /><span>{enabled ? "提醒已开启" : "提醒已关闭"}</span>
+                </button>
+              </header>
+
+              <div className="budget-numbers">
+                <span><small>现在占用</small><strong>{app.size}<em> GB</em></strong></span>
+                <i>对比</i>
+                <span><small>超过这个数就提醒我</small><strong className="budget-limit-value">{budget}<em> GB</em></strong></span>
               </div>
-              <div className="budget-control">
-                <button type="button" aria-label={`降低${app.name}预算`} onClick={() => onChange(app.id, Math.max(5, budget - 5))}>−</button>
-                <span>{budget} GB</span>
-                <button type="button" aria-label={`提高${app.name}预算`} onClick={() => onChange(app.id, Math.min(100, budget + 5))}>＋</button>
+
+              <div className="budget-visual" aria-hidden="true">
+                <div className="budget-progress"><i className={over ? "over" : ""} style={{ width: `${used}%` }} /><span style={{ left: `${marker}%` }} /></div>
+                <div><span>0 GB</span><b style={{ left: `${marker}%` }}>提醒线 {budget} GB</b><span>{scaleMax} GB</span></div>
+              </div>
+
+              <p className={`budget-status ${over ? "over" : "safe"}`}>
+                {!enabled ? "当前不会发送提醒。" : over ? `已经超过 ${difference} GB，建议查看增长原因。` : `距离提醒线还有 ${difference} GB，目前不用处理。`}
+              </p>
+
+              <div className="budget-editor">
+                <label htmlFor={`budget-${app.id}`}>拖动设置提醒上限</label>
+                <input id={`budget-${app.id}`} type="range" min="5" max="100" step="5" value={budget} onChange={(event) => onChange(app.id, Number(event.target.value))} aria-valuetext={`${budget} GB`} />
+                <div className="budget-presets" aria-label={`${app.name}常用提醒上限`}>
+                  {[20, 40, 60].map((value) => <button type="button" className={budget === value ? "active" : ""} key={value} onClick={() => onChange(app.id, value)}>{value} GB</button>)}
+                </div>
               </div>
             </article>
           );
         })}
       </section>
-      <div className="rule-note"><span>⌁</span><div><b>预算不会自动删除文件</b><p>应用接近预算时，轻盘会先解释原因并生成方案，由你确认后才执行。</p></div></div>
+      <div className="rule-note budget-reveal"><span>✓</span><div><b>它只是提醒线，不是强制限制</b><p>轻盘不会阻止软件继续使用空间，也不会自动删除；它会在超过时提醒你并给出处理建议。</p></div></div>
     </div>
   );
 }
@@ -797,14 +901,14 @@ function Inspector({ app, budget, onPlan, onInvestigate }: { app: AppRecord; bud
       <div className="app-profile">
         <AppBadge app={app} />
         <div><h2>{app.name}</h2><p>{app.kind}</p></div>
-        <span className={over ? "risk-tag" : "safe-tag"}>{over ? "超出预算" : "预算内"}</span>
+        <span className={over ? "risk-tag" : "safe-tag"}>{over ? "超过提醒线" : "占用正常"}</span>
       </div>
       <div className="app-number">
         <span>当前占用</span><strong>{app.size}<small> GB</small></strong>
         <p><i>↗</i> 过去 24 小时增长 {app.growth} GB</p>
       </div>
       <div className="budget-meter">
-        <div><span>空间预算</span><b>{app.size} / {budget} GB</b></div>
+        <div><span>占用提醒线</span><b>{app.size} / {budget} GB</b></div>
         <div className="budget-track"><i className={over ? "over" : ""} style={{ width: `${Math.min((app.size / budget) * 100, 100)}%` }} /></div>
         <small>{over ? `已超出 ${(app.size - budget).toFixed(1)} GB` : `还可使用 ${(budget - app.size).toFixed(1)} GB`}</small>
       </div>
