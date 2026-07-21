@@ -216,7 +216,7 @@ export default function DesktopApp() {
           <span className="brand-mark">Q</span>
           <div>
             <strong>轻盘</strong>
-            <small>SPACE FIREWALL</small>
+            <small>AI 驱动的智能空间管理产品</small>
           </div>
         </div>
         <nav className="primary-nav" aria-label="主导航">

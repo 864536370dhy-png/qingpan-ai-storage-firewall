@@ -293,7 +293,7 @@ export default function Home() {
           <span className="brand-mark">Q</span>
           <div>
             <strong>轻盘</strong>
-            <small>SPACE FIREWALL</small>
+            <small>AI 驱动的智能空间管理产品</small>
           </div>
         </div>
 
