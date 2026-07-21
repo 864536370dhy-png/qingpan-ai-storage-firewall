@@ -293,7 +293,7 @@ export default function Home() {
         <div className="brand">
           <span
             className="brand-mark"
-            style={{ "--brand-mark-image": `url("${qingpanMark}")` } as React.CSSProperties}
+        style={{ "--brand-mark-image": `url("${qingpanMark.src}")` } as React.CSSProperties}
             aria-hidden="true"
           />
           <div>
