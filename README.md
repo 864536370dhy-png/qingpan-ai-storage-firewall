@@ -1,4 +1,10 @@
-# 轻盘 · AI 驱动的智能空间管理产品
+<p align="center">
+  <a href="https://qingpan-ai-space.pamelamerrittgwe.chatgpt.site">
+    <img src="src-tauri/icons/source.png" width="148" alt="轻盘应用图标" />
+  </a>
+</p>
+
+<h1 align="center">轻盘 · AI 驱动的智能空间管理产品</h1>
 
 轻盘是一款 macOS 桌面端 AI 存储分析产品。它读取本机文件元数据，帮助用户看懂磁盘空间被哪些软件占用、最近哪些应用数据比较活跃，以及哪些缓存值得优先检查。
 
