@@ -1075,3 +1075,244 @@ h1, h2, h3, p { margin-top: 0; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* Soft public showcase theme inspired by the latest reference dashboard. */
+html[data-theme="light"] body {
+  background:
+    radial-gradient(circle at 78% 5%, rgba(159, 218, 255, .42), transparent 27%),
+    radial-gradient(circle at 20% 0%, rgba(193, 245, 224, .5), transparent 24%),
+    linear-gradient(135deg, #eef7fb 0%, #f8fbff 48%, #edf3f8 100%);
+}
+
+[data-theme="light"].desktop-shell {
+  width: min(1510px, calc(100vw - 36px));
+  margin: 18px auto;
+  grid-template-columns: 226px minmax(610px, 1fr) 328px;
+  border: 1px solid rgba(196, 212, 226, .86);
+  border-radius: 26px;
+  background: rgba(255, 255, 255, .76);
+  box-shadow: 0 24px 70px rgba(84, 108, 132, .16);
+  backdrop-filter: blur(22px);
+}
+
+[data-theme="light"] .sidebar {
+  background: rgba(230, 234, 239, .82);
+}
+
+[data-theme="light"] .brand {
+  padding-top: 22px;
+}
+
+[data-theme="light"] .brand strong {
+  font-size: 16px;
+  letter-spacing: 0;
+}
+
+[data-theme="light"] .brand small {
+  font-size: 9px;
+  letter-spacing: 0;
+}
+
+[data-theme="light"] .nav-caption {
+  letter-spacing: .08em;
+}
+
+[data-theme="light"] .nav-item {
+  min-height: 42px;
+  border-radius: 9px;
+  font-size: 13px;
+}
+
+[data-theme="light"] .nav-item.active {
+  background: rgba(255, 255, 255, .92);
+  box-shadow: 0 10px 26px rgba(88, 105, 124, .11);
+}
+
+[data-theme="light"] .local-status {
+  border: 0;
+  background: rgba(255, 255, 255, .66);
+  box-shadow: inset 0 0 0 1px rgba(205, 217, 228, .72);
+}
+
+[data-theme="light"] .center-pane {
+  background: rgba(248, 250, 253, .76);
+}
+
+[data-theme="light"] .topbar {
+  height: 64px;
+  border-color: rgba(215, 224, 233, .9);
+  background: rgba(248, 251, 254, .72);
+}
+
+[data-theme="light"] .content-scroll {
+  height: calc(100vh - 96px);
+}
+
+[data-theme="light"] .page {
+  max-width: 1040px;
+  padding-top: 24px;
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+[data-theme="light"] .overview-hero {
+  min-height: 210px;
+  margin: 0 0 22px;
+  padding: 42px 34px 34px;
+  align-items: flex-start;
+  border: 1px solid rgba(214, 225, 233, .72);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 94% 12%, rgba(84, 203, 188, .54) 0 8%, transparent 21%),
+    radial-gradient(circle at 78% 7%, rgba(99, 180, 255, .45) 0 5%, transparent 26%),
+    radial-gradient(circle at 67% 13%, rgba(255, 194, 127, .48) 0 4%, transparent 21%),
+    radial-gradient(circle at 53% 10%, rgba(224, 247, 229, .9), transparent 33%),
+    linear-gradient(110deg, rgba(255, 255, 255, .94), rgba(238, 249, 245, .78) 47%, rgba(237, 245, 255, .88));
+  box-shadow: 0 18px 44px rgba(96, 122, 146, .11);
+}
+
+[data-theme="light"] .overview-hero .eyebrow {
+  color: #6f8795;
+}
+
+[data-theme="light"] .overview-hero h1 {
+  max-width: 660px;
+  margin-bottom: 14px;
+  color: #171d28;
+  font-size: clamp(36px, 3.6vw, 52px);
+  font-weight: 760;
+  letter-spacing: 0;
+}
+
+[data-theme="light"] .overview-hero > div > p:last-child {
+  max-width: 560px;
+  color: #65717d;
+  font-size: 15px;
+}
+
+[data-theme="light"] .primary-button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 8px;
+  background: #0f1220;
+  box-shadow: 0 12px 28px rgba(18, 22, 35, .2);
+}
+
+[data-theme="light"] .secondary-button,
+[data-theme="light"] .ghost-button {
+  min-height: 42px;
+  border-radius: 8px;
+}
+
+[data-theme="light"] .ghost-button {
+  border-color: rgba(216, 224, 233, .9);
+  background: rgba(255, 255, 255, .72);
+}
+
+[data-theme="light"] .storage-card,
+[data-theme="light"] .metric-card,
+[data-theme="light"] .growth-list,
+[data-theme="light"] .timeline-card,
+[data-theme="light"] .change-summary,
+[data-theme="light"] .budget-card,
+[data-theme="light"] .budget-guide,
+[data-theme="light"] .budget-priority,
+[data-theme="light"] .ask-card,
+[data-theme="light"] .finding-card,
+[data-theme="light"] .settings-list,
+[data-theme="light"] .promise-grid > div,
+[data-theme="light"] .ai-callout {
+  border-radius: 8px;
+  border-color: rgba(222, 230, 238, .92);
+  background: rgba(255, 255, 255, .84);
+  box-shadow: 0 12px 30px rgba(77, 96, 116, .07);
+}
+
+[data-theme="light"] .storage-card {
+  min-height: 142px;
+  background: rgba(255, 255, 255, .9);
+}
+
+[data-theme="light"] .metric-grid {
+  gap: 14px;
+}
+
+[data-theme="light"] .metric-card {
+  min-height: 126px;
+}
+
+[data-theme="light"] .metric-card.danger {
+  background: linear-gradient(135deg, rgba(210, 248, 238, .92), rgba(255, 255, 255, .88));
+}
+
+[data-theme="light"] .metric-card.warning {
+  background: linear-gradient(135deg, rgba(255, 219, 184, .9), rgba(255, 255, 255, .88));
+}
+
+[data-theme="light"] .metric-card.safe {
+  background: linear-gradient(135deg, rgba(225, 235, 255, .94), rgba(255, 255, 255, .88));
+}
+
+[data-theme="light"] .metric-card strong {
+  color: #0f1726;
+  letter-spacing: 0;
+}
+
+[data-theme="light"] .metric-top i {
+  background: rgba(255, 255, 255, .62);
+}
+
+[data-theme="light"] .growth-row,
+[data-theme="light"] .timeline-row {
+  min-height: 64px;
+}
+
+[data-theme="light"] .ai-callout {
+  background: linear-gradient(100deg, rgba(241, 251, 246, .98), rgba(238, 244, 255, .9));
+}
+
+[data-theme="light"] .inspector {
+  background: rgba(246, 248, 251, .82);
+}
+
+[data-theme="light"] .ai-insight {
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .74);
+}
+
+[data-theme="light"] .app-badge,
+[data-theme="light"] .ai-symbol,
+[data-theme="light"] .ask-icon,
+[data-theme="light"] .vault-entry-icon {
+  border-radius: 8px;
+}
+
+[data-theme="light"] .budget-overview-chip,
+[data-theme="light"] .privacy-chip,
+[data-theme="light"] .vault-count,
+[data-theme="light"] .demo-badge,
+[data-theme="light"] .theme-switch,
+[data-theme="light"] .icon-button,
+[data-theme="light"] .avatar {
+  border-radius: 8px;
+}
+
+[data-theme="light"] .chart-bars {
+  background: repeating-linear-gradient(to bottom, transparent 0, transparent 35px, rgba(219, 228, 236, .8) 36px);
+}
+
+@media (max-width: 680px) {
+  [data-theme="light"] .overview-hero {
+    min-height: 0;
+    padding: 28px 20px;
+  }
+
+  [data-theme="light"] .overview-hero h1 {
+    font-size: 34px;
+  }
+}

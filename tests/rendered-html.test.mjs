@@ -62,8 +62,10 @@ test("keeps the interactive workflow and dark design tokens in source", async ()
   assert.match(page, /trendAppId/);
   assert.match(page, /single-trend-head/);
   assert.match(page, /Agent Reach/);
-  assert.match(page, /qingpan-theme/);
+  assert.match(page, /qingpan-soft-theme/);
   assert.match(page, /界面主题/);
+  assert.match(page, /智能管理电脑空间/);
+  assert.doesNotMatch(page, /皓阳/);
   assert.match(page, /软件占用提醒/);
   assert.match(page, /超过这个数就提醒我/);
   assert.match(page, /让 AI 看看怎么处理/);

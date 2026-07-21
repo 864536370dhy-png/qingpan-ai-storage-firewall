@@ -208,7 +208,7 @@ export default function Home() {
   const [selectedActions, setSelectedActions] = useState<string[]>(defaultSelectedActions("capcut"));
   const [vaultRecord, setVaultRecord] = useState<VaultRecord | null>(null);
   const [restored, setRestored] = useState(false);
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [theme, setTheme] = useState<Theme>("light");
   const [query, setQuery] = useState("为什么今天突然多了 31 GB？找出来源，但先不要删除");
   const [investigated, setInvestigated] = useState(false);
   const [budgets, setBudgets] = useState<Record<AppId, number>>({
@@ -247,7 +247,7 @@ export default function Home() {
   }, [scanState]);
 
   useEffect(() => {
-    const savedTheme = window.localStorage.getItem("qingpan-theme");
+    const savedTheme = window.localStorage.getItem("qingpan-soft-theme");
     const frame = window.requestAnimationFrame(() => {
       if (savedTheme === "light" || savedTheme === "dark") setTheme(savedTheme);
     });
@@ -256,7 +256,7 @@ export default function Home() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    window.localStorage.setItem("qingpan-theme", theme);
+    window.localStorage.setItem("qingpan-soft-theme", theme);
   }, [theme]);
 
   function startScan() {
@@ -474,17 +474,20 @@ function Overview({
   onPlan: () => void;
 }) {
   return (
-    <div className="page">
-      <div className="page-heading">
+    <div className="page overview-page">
+      <div className="page-heading overview-hero">
         <div>
           <p className="eyebrow">空间总览 · 今天</p>
-          <h1>下午好，皓阳</h1>
-          <p>电脑空间正在快速变化，轻盘已经找到了原因。</p>
+          <h1>智能管理电脑空间</h1>
+          <p>轻盘正在识别哪些软件占用变大，并把可处理内容整理成安全方案。</p>
         </div>
-        <button type="button" className="primary-button" onClick={onScan} disabled={scanState === "scanning"}>
-          <span>{scanState === "scanning" ? `${scanProgress}%` : "⌁"}</span>
-          {scanState === "scanning" ? "正在扫描" : scanState === "done" ? "重新扫描" : "开始扫描"}
-        </button>
+        <div className="hero-actions">
+          <button type="button" className="primary-button" onClick={onScan} disabled={scanState === "scanning"}>
+            <span>{scanState === "scanning" ? `${scanProgress}%` : "⌁"}</span>
+            {scanState === "scanning" ? "正在扫描" : scanState === "done" ? "重新扫描" : "开始扫描"}
+          </button>
+          <button type="button" className="ghost-button" onClick={() => onNavigate("budgets")}>查看占用提醒</button>
+        </div>
       </div>
 
       <section className="storage-card">
