@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import qingpanMark from "../public/qingpan-mark.png";
 
 type NavId = "overview" | "changes" | "budgets" | "investigate" | "vault" | "settings";
 type AppId = "capcut" | "wechat" | "xcode" | "lark";
@@ -293,7 +292,7 @@ export default function Home() {
         <div className="brand">
           <span
             className="brand-mark"
-            style={{ "--brand-mark-image": `url("${qingpanMark.src}")` } as React.CSSProperties}
+            style={{ "--brand-mark-image": 'url("/qingpan-mark.png")' } as React.CSSProperties}
             aria-hidden="true"
           />
           <div>
