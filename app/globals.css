@@ -105,17 +105,15 @@ h1, h2, h3, p { margin-top: 0; }
 
 .brand { display: flex; align-items: center; gap: 11px; padding: 14px 9px 31px; }
 .brand-mark {
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgba(140, 166, 255, .4);
-  border-radius: 11px;
-  color: #f8faff;
-  background: linear-gradient(135deg, #5874f0, #8e69ff);
-  box-shadow: 0 8px 24px rgba(78, 106, 231, .24);
-  font-size: 15px;
-  font-weight: 800;
+  width: 39px;
+  height: 39px;
+  display: block;
+  flex: 0 0 auto;
+  background-image: var(--brand-mark-image);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  filter: drop-shadow(0 8px 14px rgba(80, 105, 235, .28));
 }
 .brand strong, .brand small { display: block; }
 .brand strong { font-size: 14px; letter-spacing: .08em; }
@@ -984,7 +982,7 @@ h1, h2, h3, p { margin-top: 0; }
   .sidebar { min-height: 100vh; padding-inline: 9px; }
   .window-controls, .brand > div, .nav-caption, .nav-item > span:not(.nav-icon), .local-status div { display: none; }
   .brand { padding: 14px 11px 31px; }
-  .brand-mark { width: 34px; height: 34px; }
+  .brand-mark { width: 36px; height: 36px; }
   .nav-item { justify-content: center; padding: 0; }
   .nav-icon { width: auto; }
   .nav-item em { position: absolute; margin: -24px -31px 0 0; }
@@ -997,7 +995,7 @@ h1, h2, h3, p { margin-top: 0; }
 @media (max-width: 680px) {
   .desktop-shell { grid-template-columns: 58px minmax(0, 1fr); }
   .brand { padding-inline: 3px; }
-  .brand-mark { width: 34px; }
+  .brand-mark { width: 36px; }
   .page { padding: 26px 16px 44px; }
   .page-heading { flex-direction: column; }
   .metric-grid, .promise-grid, .agent-grid { grid-template-columns: 1fr; }

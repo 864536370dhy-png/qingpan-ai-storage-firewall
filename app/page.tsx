@@ -290,7 +290,11 @@ export default function Home() {
         </div>
 
         <div className="brand">
-          <span className="brand-mark">Q</span>
+          <span
+            className="brand-mark"
+            style={{ "--brand-mark-image": 'url("/qingpan-mark.png")' } as React.CSSProperties}
+            aria-hidden="true"
+          />
           <div>
             <strong>轻盘</strong>
             <small>AI 驱动的智能空间管理产品</small>

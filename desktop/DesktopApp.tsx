@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import qingpanMark from "../public/qingpan-mark.png";
 
 type Theme = "dark" | "light";
 type NavId = "overview" | "applications" | "investigate" | "settings";
@@ -213,7 +214,11 @@ export default function DesktopApp() {
       <aside className="sidebar">
         <div className="desktop-titlebar" data-tauri-drag-region />
         <div className="brand">
-          <span className="brand-mark">Q</span>
+          <span
+            className="brand-mark"
+            style={{ "--brand-mark-image": `url("${qingpanMark}")` } as React.CSSProperties}
+            aria-hidden="true"
+          />
           <div>
             <strong>轻盘</strong>
             <small>AI 驱动的智能空间管理产品</small>
