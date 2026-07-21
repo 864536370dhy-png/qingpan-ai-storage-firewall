@@ -1,7 +1,5 @@
 <p align="center">
-  <a href="https://qingpan-ai-space.pamelamerrittgwe.chatgpt.site">
-    <img src="src-tauri/icons/source.png" width="148" alt="轻盘应用图标" />
-  </a>
+  <img src="src-tauri/icons/source.png" width="148" alt="轻盘应用图标" />
 </p>
 
 <h1 align="center">轻盘 · AI 驱动的智能空间管理产品</h1>
