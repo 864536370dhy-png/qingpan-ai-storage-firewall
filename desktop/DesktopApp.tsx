@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import qingpanMark from "../public/qingpan-mark.png";
 
 type Theme = "dark" | "light";
-type NavId = "overview" | "applications" | "investigate" | "settings";
+type NavId = "overview" | "applications" | "cleanup" | "investigate" | "vault" | "settings";
 type Provider = "gemini" | "deepseek" | "openai";
 
 type ScanCategory = {
@@ -49,6 +49,39 @@ type AiResponse = {
   content: string;
 };
 
+type CleanupCandidate = {
+  id: string;
+  app_id: string;
+  app_name: string;
+  category: string;
+  display_name: string;
+  display_path: string;
+  path: string;
+  item_type: "file" | "folder";
+  file_kind: string;
+  size_bytes: number;
+  modified_unix: number;
+  risk: "safe" | "confirm";
+  reason: string;
+};
+
+type QuarantineItem = {
+  id: string;
+  app_id: string;
+  app_name: string;
+  display_name: string;
+  original_path: string;
+  quarantine_path: string;
+  item_type: "file" | "folder";
+  size_bytes: number;
+  quarantined_unix: number;
+};
+
+type CleanupBatch = {
+  moved: QuarantineItem[];
+  errors: string[];
+};
+
 const providerDefaults: Record<Provider, string> = {
   gemini: "gemini-2.5-flash-lite",
   deepseek: "deepseek-v4-flash",
@@ -58,7 +91,9 @@ const providerDefaults: Record<Provider, string> = {
 const navItems: { id: NavId; icon: string; label: string }[] = [
   { id: "overview", icon: "⌂", label: "真实总览" },
   { id: "applications", icon: "◫", label: "本机软件" },
+  { id: "cleanup", icon: "⌕", label: "具体文件清理" },
   { id: "investigate", icon: "✦", label: "AI 调查" },
+  { id: "vault", icon: "↶", label: "安全隔离区" },
   { id: "settings", icon: "⚙", label: "设置" },
 ];
 
@@ -72,6 +107,11 @@ function formatBytes(bytes: number, digits = 1) {
   const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
   const value = bytes / 1024 ** exponent;
   return `${value.toFixed(exponent >= 3 ? digits : 0)} ${units[exponent]}`;
+}
+
+function nonOverlappingCandidates(items: CleanupCandidate[]) {
+  const sorted = [...items].sort((left, right) => left.path.length - right.path.length);
+  return sorted.filter((item, index) => !sorted.slice(0, index).some((parent) => item.path.startsWith(`${parent.path}/`)));
 }
 
 function AppBadge({ app, small = false }: { app: AppUsage; small?: boolean }) {
@@ -106,6 +146,16 @@ export default function DesktopApp() {
   const [aiState, setAiState] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [aiResult, setAiResult] = useState<AiResponse | null>(null);
   const [aiError, setAiError] = useState("");
+  const [candidates, setCandidates] = useState<CleanupCandidate[]>([]);
+  const [candidateState, setCandidateState] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [candidateError, setCandidateError] = useState("");
+  const [selectedPaths, setSelectedPaths] = useState<string[]>([]);
+  const [cleanupMessage, setCleanupMessage] = useState("");
+  const [cleanupBusy, setCleanupBusy] = useState(false);
+  const [candidateAiState, setCandidateAiState] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [candidateAiResult, setCandidateAiResult] = useState<AiResponse | null>(null);
+  const [quarantine, setQuarantine] = useState<QuarantineItem[]>([]);
+  const [vaultMessage, setVaultMessage] = useState("");
 
   const apps = useMemo(() => scan?.apps ?? [], [scan]);
   const selectedApp = apps.find((app) => app.id === selectedId) ?? apps[0] ?? null;
@@ -136,6 +186,11 @@ export default function DesktopApp() {
     }, 260);
     return () => window.clearInterval(timer);
   }, [scanState]);
+
+  useEffect(() => {
+    if (active === "cleanup" && selectedId) void loadCandidates(selectedId);
+    if (active === "vault") void loadQuarantine();
+  }, [active, selectedId]);
 
   async function startScan() {
     setScanError("");
@@ -209,6 +264,103 @@ export default function DesktopApp() {
     }
   }
 
+  async function loadCandidates(appId: string) {
+    setCandidateState("loading");
+    setCandidateError("");
+    setSelectedPaths([]);
+    setCleanupMessage("");
+    setCandidateAiResult(null);
+    setCandidateAiState("idle");
+    try {
+      const result = await invoke<CleanupCandidate[]>("scan_app_candidates", { appId });
+      setCandidates(result);
+      setCandidateState("done");
+    } catch (error) {
+      setCandidates([]);
+      setCandidateError(String(error));
+      setCandidateState("error");
+    }
+  }
+
+  async function loadQuarantine() {
+    try {
+      setQuarantine(await invoke<QuarantineItem[]>("list_quarantine_items"));
+    } catch (error) {
+      setVaultMessage(String(error));
+    }
+  }
+
+  async function runCleanup() {
+    if (!selectedApp || !selectedPaths.length) return;
+    const chosen = candidates.filter((item) => selectedPaths.includes(item.path));
+    if (chosen.some((item) => item.risk === "confirm")) {
+      const accepted = window.confirm("所选内容中包含聊天资料、工程素材或归档。轻盘无法判断文件内容是否仍有价值，确认先移入隔离区吗？");
+      if (!accepted) return;
+    }
+    setCleanupBusy(true);
+    setCleanupMessage("正在移入安全隔离区…");
+    try {
+      const result = await invoke<CleanupBatch>("quarantine_items", {
+        appId: selectedApp.id,
+        paths: selectedPaths,
+      });
+      const errorCopy = result.errors.length ? `；${result.errors.length} 项处理失败` : "";
+      setCleanupMessage(`已将 ${result.moved.length} 项移入隔离区，释放 ${formatBytes(result.moved.reduce((sum, item) => sum + item.size_bytes, 0))}${errorCopy}`);
+      setSelectedPaths([]);
+      await Promise.all([loadCandidates(selectedApp.id), loadQuarantine()]);
+    } catch (error) {
+      setCleanupMessage(`处理失败：${String(error)}`);
+    } finally {
+      setCleanupBusy(false);
+    }
+  }
+
+  async function reviewCandidatesWithAi() {
+    if (!hasKey) {
+      setCandidateAiState("error");
+      setCandidateError(`请先在设置中配置${provider.toUpperCase()} API Key`);
+      return;
+    }
+    const chosen = candidates.filter((item) => selectedPaths.includes(item.path));
+    const reviewItems = chosen.length ? chosen : candidates.slice(0, 20);
+    setCandidateAiState("loading");
+    setCandidateAiResult(null);
+    try {
+      const result = await invoke<AiResponse>("analyze_cleanup_candidates", {
+        provider,
+        model,
+        question: `复核${selectedApp?.name ?? "这个软件"}中这些大文件，告诉我哪些适合先移入隔离区。`,
+        candidates: reviewItems,
+      });
+      setCandidateAiResult(result);
+      setCandidateAiState("done");
+    } catch (error) {
+      setCandidateError(String(error));
+      setCandidateAiState("error");
+    }
+  }
+
+  async function restoreItem(id: string) {
+    try {
+      await invoke("restore_quarantine_item", { id });
+      setVaultMessage("文件已经恢复到原位置。");
+      await loadQuarantine();
+    } catch (error) {
+      setVaultMessage(`恢复失败：${String(error)}`);
+    }
+  }
+
+  async function deleteItem(item: QuarantineItem) {
+    if (!window.confirm(`永久删除“${item.display_name}”吗？此操作无法恢复。`)) return;
+    try {
+      await invoke("permanently_delete_quarantine_item", { id: item.id });
+      setVaultMessage("已从隔离区永久删除。");
+      await loadQuarantine();
+    } catch (error) {
+      setVaultMessage(`永久删除失败：${String(error)}`);
+    }
+  }
+
   return (
     <main className="desktop-shell actual-desktop" data-theme={theme}>
       <aside className="sidebar">
@@ -242,8 +394,8 @@ export default function DesktopApp() {
           <div className="local-status">
             <span className="status-orb">✓</span>
             <div>
-              <b>只读保护已开启</b>
-              <small>不读取正文 · 不执行删除</small>
+              <b>安全清理已开启</b>
+              <small>白名单目录 · 可恢复隔离</small>
             </div>
           </div>
         </div>
@@ -274,13 +426,36 @@ export default function DesktopApp() {
               onScan={startScan}
               onSelect={(id) => {
                 setSelectedId(id);
-                setActive("applications");
+                setActive("cleanup");
               }}
               onAi={() => setActive("investigate")}
             />
           )}
           {active === "applications" && (
             <ApplicationsPage apps={apps} selectedId={selectedApp?.id ?? ""} onSelect={setSelectedId} onScan={startScan} />
+          )}
+          {active === "cleanup" && (
+            <CleanupPage
+              apps={apps}
+              app={selectedApp}
+              candidates={candidates}
+              state={candidateState}
+              error={candidateError}
+              selectedPaths={selectedPaths}
+              message={cleanupMessage}
+              busy={cleanupBusy}
+              aiState={candidateAiState}
+              aiResult={candidateAiResult}
+              onSelectApp={setSelectedId}
+              onToggle={(path) => setSelectedPaths((current) => current.includes(path) ? current.filter((item) => item !== path) : [...current, path])}
+              onSelectSafe={() => setSelectedPaths(nonOverlappingCandidates(candidates.filter((item) => item.risk === "safe")).map((item) => item.path))}
+              onClear={() => setSelectedPaths([])}
+              onRefresh={() => selectedApp && loadCandidates(selectedApp.id)}
+              onAi={reviewCandidatesWithAi}
+              onCleanup={runCleanup}
+              onSettings={() => setActive("settings")}
+              hasKey={hasKey}
+            />
           )}
           {active === "investigate" && (
             <AiPage
@@ -295,6 +470,9 @@ export default function DesktopApp() {
               onInvestigate={investigate}
               onSettings={() => setActive("settings")}
             />
+          )}
+          {active === "vault" && (
+            <VaultPage items={quarantine} message={vaultMessage} onRestore={restoreItem} onDelete={deleteItem} />
           )}
           {active === "settings" && (
             <SettingsPage
@@ -317,7 +495,7 @@ export default function DesktopApp() {
         </div>
       </section>
 
-      <Inspector app={selectedApp} onAi={() => setActive("investigate")} />
+      <Inspector app={selectedApp} onAi={() => setActive("investigate")} onCleanup={() => setActive("cleanup")} />
 
       {scanState === "scanning" && (
         <div className="scan-toast" role="status">
@@ -462,6 +640,185 @@ function ApplicationsPage({
   );
 }
 
+function CleanupPage({
+  apps,
+  app,
+  candidates,
+  state,
+  error,
+  selectedPaths,
+  message,
+  busy,
+  aiState,
+  aiResult,
+  onSelectApp,
+  onToggle,
+  onSelectSafe,
+  onClear,
+  onRefresh,
+  onAi,
+  onCleanup,
+  onSettings,
+  hasKey,
+}: {
+  apps: AppUsage[];
+  app: AppUsage | null;
+  candidates: CleanupCandidate[];
+  state: "idle" | "loading" | "done" | "error";
+  error: string;
+  selectedPaths: string[];
+  message: string;
+  busy: boolean;
+  aiState: "idle" | "loading" | "done" | "error";
+  aiResult: AiResponse | null;
+  onSelectApp: (id: string) => void;
+  onToggle: (path: string) => void;
+  onSelectSafe: () => void;
+  onClear: () => void;
+  onRefresh: () => void;
+  onAi: () => void;
+  onCleanup: () => void;
+  onSettings: () => void;
+  hasKey: boolean;
+}) {
+  const selected = nonOverlappingCandidates(candidates.filter((item) => selectedPaths.includes(item.path)));
+  const selectedTotal = selected.reduce((sum, item) => sum + item.size_bytes, 0);
+  const safeTotal = candidates.filter((item) => item.risk === "safe").reduce((sum, item) => sum + item.size_bytes, 0);
+  const isSupported = app ? ["capcut", "wechat", "xcode", "lark"].includes(app.id) : false;
+
+  return (
+    <div className="page cleanup-page">
+      <div className="page-heading cleanup-heading">
+        <div>
+          <p className="eyebrow">文件级空间溯源</p>
+          <h1>找到具体文件，再决定清不清</h1>
+          <p>轻盘只展示白名单软件目录中的大文件和大文件夹；你可以只处理其中一项。</p>
+        </div>
+        <button type="button" className="ghost-button" onClick={onRefresh} disabled={!app || state === "loading"}>重新检查</button>
+      </div>
+
+      <section className="cleanup-flow" aria-label="安全清理流程">
+        <div className="active"><span>1</span><b>定位来源</b><small>具体到文件或文件夹</small></div>
+        <i>→</i>
+        <div><span>2</span><b>判断风险</b><small>本地规则 + AI复核</small></div>
+        <i>→</i>
+        <div><span>3</span><b>安全清理</b><small>先隔离，随时恢复</small></div>
+      </section>
+
+      <div className="cleanup-app-tabs" aria-label="选择软件">
+        {apps.filter((item) => ["capcut", "wechat", "xcode", "lark"].includes(item.id)).map((item) => (
+          <button type="button" key={item.id} className={app?.id === item.id ? "active" : ""} onClick={() => onSelectApp(item.id)}>
+            <AppBadge app={item} small /><span><b>{item.name}</b><small>{formatBytes(item.size_bytes)}</small></span>
+          </button>
+        ))}
+      </div>
+
+      {!app && <div className="empty-scan"><span>⌕</span><b>请先完成真实扫描</b><p>扫描后才能定位本机的具体占用文件。</p></div>}
+      {app && !isSupported && <div className="desktop-notice">{app.name}目前只能识别应用包大小，尚未建立安全的数据目录规则。请选择微信、剪映、Xcode或飞书。</div>}
+      {error && <div className="desktop-error">{error}</div>}
+      {message && <div className="cleanup-success">{message}</div>}
+
+      {app && isSupported && (
+        <>
+          <section className="cleanup-summary-card">
+            <div><span className="summary-icon">⌕</span><p><b>{app.name}具体占用</b><small>{state === "loading" ? "正在读取文件元数据…" : `发现 ${candidates.length} 个大文件或文件夹`}</small></p></div>
+            <div><span>本地规则建议</span><strong>{formatBytes(safeTotal)}</strong><small>可优先移入隔离区</small></div>
+            <div><span>本次已选择</span><strong>{formatBytes(selectedTotal)}</strong><small>{selected.length} 项</small></div>
+          </section>
+
+          <section className="candidate-panel">
+            <header>
+              <div><h2>具体是哪一个文件占空间</h2><p>不会整包清空；每一项都由你单独选择。</p></div>
+              <div className="candidate-actions">
+                <button type="button" onClick={onSelectSafe}>只选绿色安全项</button>
+                <button type="button" onClick={onClear}>取消选择</button>
+              </div>
+            </header>
+            {state === "loading" ? (
+              <div className="candidate-loading"><span>⌁</span><b>正在定位具体文件…</b><p>大目录可能需要几十秒，请保持软件窗口开启。</p></div>
+            ) : candidates.length ? (
+              <div className="candidate-list">
+                {candidates.map((item, index) => {
+                  const checked = selectedPaths.includes(item.path);
+                  return (
+                    <label className={checked ? "candidate-row selected" : "candidate-row"} key={item.id}>
+                      <input type="checkbox" checked={checked} onChange={() => onToggle(item.path)} />
+                      <span className={`file-kind ${item.item_type}`}>{item.item_type === "folder" ? "▣" : "▤"}</span>
+                      <span className="candidate-main">
+                        <b>{item.display_name}</b>
+                        <small>{item.display_path}</small>
+                        <em>{item.reason}</em>
+                      </span>
+                      <span className="candidate-meta"><i>{item.category} · {item.file_kind}</i><strong>{formatBytes(item.size_bytes)}</strong></span>
+                      <span className={item.risk === "safe" ? "candidate-risk safe" : "candidate-risk confirm"}>{item.risk === "safe" ? "可安全处理" : "需要确认"}</span>
+                      <span className="candidate-index">#{index + 1}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="candidate-loading"><span>✓</span><b>没有发现明显的大文件</b><p>轻盘仅展示大于5MB的文件和大于50MB的一级文件夹。</p></div>
+            )}
+          </section>
+
+          <section className="cleanup-decision-bar">
+            <div><span>已选 {selected.length} 项</span><strong>{formatBytes(selectedTotal)}</strong><small>实际操作会先移入隔离区，不会直接永久删除。</small></div>
+            <button type="button" className="ghost-button" onClick={hasKey ? onAi : onSettings} disabled={!candidates.length || aiState === "loading"}>
+              {aiState === "loading" ? "AI正在复核…" : hasKey ? "✦ 让AI复核" : "配置AI后复核"}
+            </button>
+            <button type="button" className="primary-button cleanup-button" onClick={onCleanup} disabled={!selected.length || busy}>
+              {busy ? "正在处理…" : "移入安全隔离区"}
+            </button>
+          </section>
+
+          {aiResult && (
+            <section className="real-ai-result candidate-ai-result">
+              <header><span>✦</span><div><p className="eyebrow">AI匿名复核</p><h2>{aiResult.provider} · {aiResult.model}</h2></div></header>
+              <div className="ai-content">{aiResult.content}</div>
+              <footer>AI只看到编号、类型、大小、修改时间和风险标签；文件名、路径与文件内容不会上传。</footer>
+            </section>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function VaultPage({
+  items,
+  message,
+  onRestore,
+  onDelete,
+}: {
+  items: QuarantineItem[];
+  message: string;
+  onRestore: (id: string) => void;
+  onDelete: (item: QuarantineItem) => void;
+}) {
+  const total = items.reduce((sum, item) => sum + item.size_bytes, 0);
+  return (
+    <div className="page vault-page">
+      <div className="page-heading">
+        <div><p className="eyebrow">可恢复清理</p><h1>安全隔离区</h1><p>清理后的项目先保存在这里。确认软件运行正常后，再决定是否永久删除。</p></div>
+        <span className="vault-total">{items.length} 项 · {formatBytes(total)}</span>
+      </div>
+      {message && <div className="cleanup-success">{message}</div>}
+      <section className="vault-explainer"><span>↶</span><div><b>为什么不直接删除？</b><p>微信聊天资料、剪映工程和Xcode归档都可能有误判。隔离让你先释放原目录空间，同时保留恢复机会。</p></div></section>
+      <section className="vault-list">
+        {items.length ? items.map((item) => (
+          <article key={item.id} className="vault-item">
+            <span className="file-kind">{item.item_type === "folder" ? "▣" : "▤"}</span>
+            <div><b>{item.display_name}</b><small>{item.app_name} · 原位置 {item.original_path.replace(/^\/Users\/[^/]+/, "~")}</small><em>{new Date(item.quarantined_unix * 1000).toLocaleString("zh-CN")}</em></div>
+            <strong>{formatBytes(item.size_bytes)}</strong>
+            <button type="button" className="ghost-button" onClick={() => onRestore(item.id)}>恢复</button>
+            <button type="button" className="danger-button" onClick={() => onDelete(item)}>永久删除</button>
+          </article>
+        )) : <div className="empty-scan"><span>↶</span><b>隔离区是空的</b><p>从“具体文件清理”移入的项目会显示在这里。</p></div>}
+      </section>
+    </div>
+  );
+}
+
 function AiPage({
   scan,
   provider,
@@ -566,15 +923,16 @@ function SettingsPage({
         {message && <p className="key-message">{message}</p>}
       </section>
       <section className="settings-list desktop-safety-list">
-        <div className="setting-row"><div><b>真实扫描范围</b><p>应用包、微信、剪映、Xcode、飞书的常见数据目录</p></div><span className="read-only-pill">只读</span></div>
+        <div className="setting-row"><div><b>真实扫描范围</b><p>应用包、微信、剪映、Xcode、飞书的常见数据目录</p></div><span className="read-only-pill">白名单</span></div>
         <div className="setting-row"><div><b>上传范围</b><p>仅软件名称、大小、分类和风险汇总，不上传文件正文与完整路径</p></div><span className="read-only-pill">匿名化</span></div>
-        <div className="setting-row"><div><b>真实删除</b><p>第一版未开放任何删除命令，AI也没有文件操作权限</p></div><span className="read-only-pill off">未开放</span></div>
+        <div className="setting-row"><div><b>文件级安全清理</b><p>只能由你选择具体文件，先移入轻盘隔离区，支持恢复</p></div><span className="read-only-pill">已开放</span></div>
+        <div className="setting-row"><div><b>永久删除</b><p>只能在隔离区手动执行，并需要再次确认；AI没有删除权限</p></div><span className="read-only-pill off">人工确认</span></div>
       </section>
     </div>
   );
 }
 
-function Inspector({ app, onAi }: { app: AppUsage | null; onAi: () => void }) {
+function Inspector({ app, onAi, onCleanup }: { app: AppUsage | null; onAi: () => void; onCleanup: () => void }) {
   if (!app) {
     return (
       <aside className="inspector desktop-inspector-empty">
@@ -585,7 +943,7 @@ function Inspector({ app, onAi }: { app: AppUsage | null; onAi: () => void }) {
   const total = Math.max(app.size_bytes, 1);
   return (
     <aside className="inspector">
-      <div className="inspector-head"><p>真实应用详情</p><span className="read-only-pill">只读</span></div>
+      <div className="inspector-head"><p>真实应用详情</p><span className="read-only-pill">文件级</span></div>
       <div className="app-profile">
         <AppBadge app={app} />
         <div><h2>{app.name}</h2><p>{app.kind}</p></div>
@@ -607,9 +965,10 @@ function Inspector({ app, onAi }: { app: AppUsage | null; onAi: () => void }) {
         </div>
       </section>
       <section className="ai-insight">
-        <div><span>✦</span><b>本地规则结论</b><em>只读</em></div>
-        <p>{app.reclaimable_bytes > 0 ? `发现约 ${formatBytes(app.reclaimable_bytes)} 的缓存或可重建内容，建议交给AI进一步解释后再确认。` : "当前只识别到应用主体或普通数据，没有标记可安全处理的内容。"}</p>
-        <button type="button" onClick={onAi}>使用AI分析 →</button>
+        <div><span>✦</span><b>下一步不是整包删除</b><em>可恢复</em></div>
+        <p>{app.reclaimable_bytes > 0 ? `发现约 ${formatBytes(app.reclaimable_bytes)} 的缓存或可重建内容。可以继续查看具体文件，只处理你选中的项目。` : "当前没有标记可自动处理的内容，但仍可以查看具体大文件并逐项确认。"}</p>
+        <button type="button" onClick={onCleanup}>查看具体文件 →</button>
+        <button type="button" onClick={onAi}>使用AI解释 →</button>
       </section>
       {app.permission_errors > 0 && <div className="permission-note">有 {app.permission_errors} 个目录未获得读取权限，结果可能不完整。</div>}
     </aside>

@@ -36,6 +36,8 @@ test("server-renders the QINGPAN desktop workspace", async () => {
   assert.match(html, /AI 调查/);
   assert.match(html, /安全恢复/);
   assert.match(html, /前端演示模式/);
+  assert.match(html, /不是整包清空，而是找到具体文件/);
+  assert.match(html, /先隔离，可恢复/);
   assert.match(html, /qingpan-social\.png/);
 });
 
@@ -52,7 +54,10 @@ test("keeps the interactive workflow and dark design tokens in source", async ()
   assert.match(page, /PlanModal/);
   assert.match(page, /planActionsByApp/);
   assert.match(page, /三个月前的群聊视频/);
-  assert.match(page, /\{app\.name\}处理方案/);
+  assert.match(page, /concreteItems/);
+  assert.match(page, /具体文件清理/);
+  assert.match(page, /不会整包清空/);
+  assert.match(page, /\{app\.name\}具体文件清理/);
   assert.match(page, /record\.appName/);
   assert.match(page, /今天新增的文件 − 今天删除或释放的空间/);
   assert.match(page, /不是当前总占用/);

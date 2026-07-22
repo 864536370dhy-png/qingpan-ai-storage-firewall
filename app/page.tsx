@@ -133,6 +133,25 @@ const planActionsByApp: Record<AppId, PlanAction[]> = {
   ],
 };
 
+const concreteItems: Record<string, { name: string; path: string; kind: string }> = {
+  "capcut-preview": { name: "preview_cache_4k_0418.bundle", path: "~/Library/Caches/剪映/Preview/", kind: "预览缓存文件夹" },
+  "capcut-proxy": { name: "夏日短片_proxy_media", path: "~/Movies/JianyingPro/Proxy/", kind: "代理素材文件夹" },
+  "capcut-thumb": { name: "waveform_thumbnails.cache", path: "~/Library/Caches/剪映/Thumbnail/", kind: "缩略图缓存" },
+  "capcut-export": { name: "品牌宣传片_最终版_副本.mp4", path: "~/Movies/JianyingPro/Export/", kind: "导出视频" },
+  "wechat-video": { name: "群聊视频_2026-03_001.mp4", path: "~/Library/Containers/微信/Message/Video/", kind: "聊天视频" },
+  "wechat-duplicate": { name: "产品方案_v8_重复下载.zip", path: "~/Library/Containers/微信/Message/File/", kind: "聊天文件" },
+  "wechat-cache": { name: "image_thumbnail_cache", path: "~/Library/Caches/微信/", kind: "图片缓存文件夹" },
+  "wechat-original": { name: "会议录屏_2025-11.mov", path: "~/Library/Containers/微信/Message/Video/", kind: "原始视频" },
+  "xcode-derived": { name: "Qingpan-fyqjzqkq_DerivedData", path: "~/Library/Developer/Xcode/DerivedData/", kind: "构建缓存文件夹" },
+  "xcode-simulator": { name: "iOS_17.2_Simulator_Runtime", path: "~/Library/Developer/CoreSimulator/", kind: "模拟器文件夹" },
+  "xcode-support": { name: "iPhoneOS17.0.sdk-support", path: "~/Library/Developer/Xcode/iOS DeviceSupport/", kind: "设备支持文件" },
+  "xcode-archive": { name: "Qingpan 2025-12-18.xcarchive", path: "~/Library/Developer/Xcode/Archives/", kind: "发布归档" },
+  "lark-meeting": { name: "meeting_replay_cache_0421", path: "~/Library/Caches/飞书/Meeting/", kind: "会议缓存文件夹" },
+  "lark-duplicate": { name: "项目排期表_副本.xlsx", path: "~/Library/Containers/飞书/Downloads/", kind: "下载附件" },
+  "lark-image": { name: "message_image_thumbnails", path: "~/Library/Caches/飞书/Image/", kind: "图片缓存文件夹" },
+  "lark-download": { name: "季度复盘资料.zip", path: "~/Library/Containers/飞书/Downloads/", kind: "下载文件" },
+};
+
 function defaultSelectedActions(id: AppId) {
   return planActionsByApp[id].filter((action) => action.risk === "安全").map((action) => action.id);
 }
@@ -479,7 +498,7 @@ function Overview({
         <div>
           <p className="eyebrow">空间总览 · 今天</p>
           <h1>智能管理电脑空间</h1>
-          <p>轻盘正在识别哪些软件占用变大，并把可处理内容整理成安全方案。</p>
+          <p>轻盘会找到具体是哪一个文件占空间，解释风险后让你单独处理。</p>
         </div>
         <div className="hero-actions">
           <button type="button" className="primary-button" onClick={onScan} disabled={scanState === "scanning"}>
@@ -515,7 +534,7 @@ function Overview({
       <section className="metric-grid">
         <Metric label="24 小时增长" value="+31.6" unit="GB" note="比日常高 4.2 倍" tone="danger" icon="↗" />
         <Metric label="预计用满" value="2.8" unit="天" note="按当前速度计算" tone="warning" icon="◷" />
-        <Metric label="可安全释放" value="21.4" unit="GB" note="不影响原文件" tone="safe" icon="✓" />
+        <Metric label="可单项处理" value="21.4" unit="GB" note="具体到文件或文件夹" tone="safe" icon="✓" />
       </section>
 
       <section className="section-block">
@@ -541,6 +560,27 @@ function Overview({
             );
           })}
         </div>
+      </section>
+
+      <section className="file-level-card">
+        <div className="section-title">
+          <div><p className="eyebrow">文件级空间溯源</p><h2>不是整包清空，而是找到具体文件</h2></div>
+          <span className="file-level-safe">先隔离，可恢复</span>
+        </div>
+        <div className="file-level-list">
+          {planActionsByApp.capcut.slice(0, 3).map((action, index) => {
+            const file = concreteItems[action.id];
+            return (
+              <button type="button" key={action.id} onClick={onPlan}>
+                <span className="file-level-icon">{index === 1 ? "▣" : "▤"}</span>
+                <span><b>{file.name}</b><small>{file.path}</small><em>{action.detail}</em></span>
+                <i className={action.risk === "安全" ? "safe" : "review"}>{action.risk === "安全" ? "可安全处理" : "需要确认"}</i>
+                <strong>{action.size} GB</strong>
+              </button>
+            );
+          })}
+        </div>
+        <footer><p><span>✦</span> AI只读取类型、大小和修改时间来复核，不上传文件内容。</p><button type="button" className="secondary-button" onClick={onPlan}>查看具体文件并选择 →</button></footer>
       </section>
 
       <section className="ai-callout">
@@ -957,15 +997,16 @@ function PlanModal({
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <section className="plan-modal" role="dialog" aria-modal="true" aria-labelledby="plan-title">
-        <header><div><p className="eyebrow">AI SAFE PLAN</p><h2 id="plan-title">{app.name}处理方案</h2><p>根据 {app.name} 的文件类型生成，可逐项确认。</p></div><button type="button" onClick={onClose} aria-label="关闭">×</button></header>
-        <div className="plan-summary"><span>预计释放</span><strong>{total.toFixed(1)} GB</strong><em>风险等级：低</em></div>
+        <header><div><p className="eyebrow">FILE-LEVEL SAFE CLEANUP</p><h2 id="plan-title">{app.name}具体文件清理</h2><p>不会整包清空；只处理你勾选的某一个文件或文件夹。</p></div><button type="button" onClick={onClose} aria-label="关闭">×</button></header>
+        <div className="plan-summary"><span>本次已选择</span><strong>{total.toFixed(1)} GB</strong><em>先隔离 · 可恢复</em></div>
         <div className="plan-items">
           {actions.map((action) => {
             const checked = selected.includes(action.id);
+            const file = concreteItems[action.id];
             return (
               <button type="button" className={checked ? "plan-item selected" : "plan-item"} key={action.id} onClick={() => onToggle(action.id)}>
                 <span className="checkbox">{checked ? "✓" : ""}</span>
-                <span><b>{action.title}</b><small>{action.detail}</small></span>
+                <span><b>{file.name}</b><small>{file.kind} · {action.detail}</small><small className="plan-path">{file.path}</small></span>
                 <em className={action.risk === "安全" ? "safe" : "review"}>{action.risk}</em>
                 <strong>{action.size} GB</strong>
               </button>

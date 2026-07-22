@@ -3,10 +3,10 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fs,
     path::{Path, PathBuf},
-    time::{Duration, Instant, SystemTime},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 use walkdir::WalkDir;
 
@@ -57,6 +57,42 @@ pub struct AiResponse {
     provider: String,
     model: String,
     content: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CleanupCandidate {
+    id: String,
+    app_id: String,
+    app_name: String,
+    category: String,
+    display_name: String,
+    display_path: String,
+    path: String,
+    item_type: String,
+    file_kind: String,
+    size_bytes: u64,
+    modified_unix: u64,
+    risk: String,
+    reason: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuarantineItem {
+    id: String,
+    app_id: String,
+    app_name: String,
+    display_name: String,
+    original_path: String,
+    quarantine_path: String,
+    item_type: String,
+    size_bytes: u64,
+    quarantined_unix: u64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CleanupBatch {
+    moved: Vec<QuarantineItem>,
+    errors: Vec<String>,
 }
 
 #[derive(Clone)]
@@ -160,6 +196,174 @@ fn home_dir() -> Result<PathBuf, String> {
     std::env::var_os("HOME")
         .map(PathBuf::from)
         .ok_or_else(|| "无法读取当前用户目录".to_string())
+}
+
+fn unix_time(time: SystemTime) -> u64 {
+    time.duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs()
+}
+
+fn candidate_kind(path: &Path, is_dir: bool) -> String {
+    if is_dir {
+        return "文件夹".to_string();
+    }
+    match path
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or_default()
+        .to_ascii_lowercase()
+        .as_str()
+    {
+        "mp4" | "mov" | "m4v" | "avi" | "mkv" | "webm" => "视频",
+        "jpg" | "jpeg" | "png" | "gif" | "webp" | "heic" => "图片",
+        "zip" | "rar" | "7z" | "tar" | "gz" => "压缩包",
+        "pdf" | "doc" | "docx" | "xls" | "xlsx" | "ppt" | "pptx" => "文档",
+        "xcarchive" => "Xcode 归档",
+        "db" | "sqlite" | "sqlite3" => "数据库",
+        _ => "文件",
+    }
+    .to_string()
+}
+
+fn candidate_reason(category: &str, safe: bool, is_dir: bool, modified_unix: u64) -> String {
+    let days = unix_time(SystemTime::now()).saturating_sub(modified_unix) / 86_400;
+    if safe {
+        format!("属于{category}，删除后通常可由软件重新生成；已约 {days} 天未修改。")
+    } else if is_dir {
+        format!(
+            "这是{category}中的完整文件夹，可能包含原始资料；已约 {days} 天未修改，需确认内容后处理。"
+        )
+    } else {
+        format!("这是{category}中的具体文件，可能仍有使用价值；已约 {days} 天未修改，需逐项确认。")
+    }
+}
+
+fn display_path(path: &Path, home: &Path) -> String {
+    path.strip_prefix(home)
+        .map(|relative| format!("~/{}", relative.to_string_lossy()))
+        .unwrap_or_else(|_| path.to_string_lossy().to_string())
+}
+
+fn cleanup_candidates_for_root(
+    app: &AppDefinition,
+    root: &Path,
+    home: &Path,
+    category: &str,
+    safe: bool,
+) -> Vec<CleanupCandidate> {
+    const MIN_FILE_BYTES: u64 = 5 * 1024 * 1024;
+    const MIN_FOLDER_BYTES: u64 = 50 * 1024 * 1024;
+    let mut files = Vec::new();
+    let mut direct_folders: HashMap<PathBuf, (u64, u64)> = HashMap::new();
+
+    for entry in WalkDir::new(root).follow_links(false).into_iter().flatten() {
+        if !entry.file_type().is_file() {
+            continue;
+        }
+        let metadata = match entry.metadata() {
+            Ok(metadata) => metadata,
+            Err(_) => continue,
+        };
+        let path = entry.path();
+        let size = metadata.len();
+        let modified = metadata.modified().map(unix_time).unwrap_or_default();
+
+        if let Ok(relative) = path.strip_prefix(root) {
+            if let Some(first) = relative.components().next() {
+                let child = root.join(first.as_os_str());
+                if child.is_dir() {
+                    let item = direct_folders.entry(child).or_default();
+                    item.0 = item.0.saturating_add(size);
+                    item.1 = item.1.max(modified);
+                }
+            }
+        }
+
+        if size < MIN_FILE_BYTES {
+            continue;
+        }
+        let name = path
+            .file_name()
+            .and_then(|value| value.to_str())
+            .unwrap_or("未命名文件")
+            .to_string();
+        files.push(CleanupCandidate {
+            id: format!("{}:{}", app.id, path.to_string_lossy()),
+            app_id: app.id.to_string(),
+            app_name: app.name.to_string(),
+            category: category.to_string(),
+            display_name: name,
+            display_path: display_path(path, home),
+            path: path.to_string_lossy().to_string(),
+            item_type: "file".to_string(),
+            file_kind: candidate_kind(path, false),
+            size_bytes: size,
+            modified_unix: modified,
+            risk: if safe { "safe" } else { "confirm" }.to_string(),
+            reason: candidate_reason(category, safe, false, modified),
+        });
+    }
+
+    let mut folders: Vec<CleanupCandidate> = direct_folders
+        .into_iter()
+        .filter(|(_, (size, _))| *size >= MIN_FOLDER_BYTES)
+        .map(|(path, (size, modified))| CleanupCandidate {
+            id: format!("{}:{}", app.id, path.to_string_lossy()),
+            app_id: app.id.to_string(),
+            app_name: app.name.to_string(),
+            category: category.to_string(),
+            display_name: path
+                .file_name()
+                .and_then(|value| value.to_str())
+                .unwrap_or("未命名文件夹")
+                .to_string(),
+            display_path: display_path(&path, home),
+            path: path.to_string_lossy().to_string(),
+            item_type: "folder".to_string(),
+            file_kind: candidate_kind(&path, true),
+            size_bytes: size,
+            modified_unix: modified,
+            risk: if safe { "safe" } else { "confirm" }.to_string(),
+            reason: candidate_reason(category, safe, true, modified),
+        })
+        .collect();
+
+    files.sort_by(|left, right| right.size_bytes.cmp(&left.size_bytes));
+    folders.sort_by(|left, right| right.size_bytes.cmp(&left.size_bytes));
+    files.truncate(80);
+    folders.truncate(16);
+    folders.extend(files);
+    folders
+}
+
+#[tauri::command]
+async fn scan_app_candidates(app_id: String) -> Result<Vec<CleanupCandidate>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let home = home_dir()?;
+        let definition = app_definitions()
+            .into_iter()
+            .find(|item| item.id == app_id)
+            .ok_or_else(|| "当前软件暂不支持文件级清理".to_string())?;
+        let mut candidates = Vec::new();
+        for (relative, category, safe) in definition.data_paths {
+            let root = home.join(relative);
+            if root.exists() {
+                candidates.extend(cleanup_candidates_for_root(
+                    &definition,
+                    &root,
+                    &home,
+                    category,
+                    *safe,
+                ));
+            }
+        }
+        candidates.sort_by(|left, right| right.size_bytes.cmp(&left.size_bytes));
+        candidates.truncate(120);
+        Ok(candidates)
+    })
+    .await
+    .map_err(|error| format!("文件级扫描异常：{error}"))?
 }
 
 fn path_stats(path: &Path) -> PathStats {
@@ -415,6 +619,199 @@ fn scan_system_blocking() -> Result<ScanResult, String> {
     })
 }
 
+fn quarantine_root(home: &Path) -> PathBuf {
+    home.join("Library/Application Support/Qingpan/Quarantine")
+}
+
+fn validated_cleanup_target(app_id: &str, raw_path: &str) -> Result<PathBuf, String> {
+    let home = home_dir()?;
+    let definition = app_definitions()
+        .into_iter()
+        .find(|item| item.id == app_id)
+        .ok_or_else(|| "当前软件不在安全清理白名单中".to_string())?;
+    let target = PathBuf::from(raw_path)
+        .canonicalize()
+        .map_err(|_| "文件已不存在或无法访问".to_string())?;
+
+    let allowed = definition.data_paths.iter().any(|(relative, _, _)| {
+        home.join(relative)
+            .canonicalize()
+            .ok()
+            .is_some_and(|root| target.starts_with(&root) && target != root)
+    });
+    if !allowed {
+        return Err("出于安全考虑，只能处理已识别软件数据目录内的具体项目".to_string());
+    }
+    let metadata = fs::symlink_metadata(&target).map_err(|_| "无法读取待处理项目".to_string())?;
+    if metadata.file_type().is_symlink() {
+        return Err("为避免路径跳转，轻盘不会处理符号链接".to_string());
+    }
+    Ok(target)
+}
+
+fn unique_quarantine_id(index: usize) -> String {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    format!("{nanos}-{}-{index}", std::process::id())
+}
+
+fn read_quarantine_manifest(path: &Path) -> Result<QuarantineItem, String> {
+    let value = fs::read_to_string(path).map_err(|error| format!("读取隔离记录失败：{error}"))?;
+    serde_json::from_str(&value).map_err(|error| format!("隔离记录已损坏：{error}"))
+}
+
+fn valid_quarantine_id(id: &str) -> bool {
+    !id.is_empty()
+        && id
+            .chars()
+            .all(|value| value.is_ascii_digit() || value == '-')
+}
+
+#[tauri::command]
+async fn quarantine_items(app_id: String, paths: Vec<String>) -> Result<CleanupBatch, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        if paths.is_empty() {
+            return Err("请至少选择一个文件或文件夹".to_string());
+        }
+        if paths.len() > 100 {
+            return Err("单次最多处理100个项目".to_string());
+        }
+        let definition = app_definitions()
+            .into_iter()
+            .find(|item| item.id == app_id)
+            .ok_or_else(|| "当前软件暂不支持安全清理".to_string())?;
+        let mut targets = Vec::new();
+        let mut seen = HashSet::new();
+        for raw_path in paths {
+            let target = validated_cleanup_target(&app_id, &raw_path)?;
+            if seen.insert(target.clone()) {
+                targets.push(target);
+            }
+        }
+        targets.sort_by_key(|path| path.components().count());
+        let mut deduplicated: Vec<PathBuf> = Vec::new();
+        for target in targets {
+            if !deduplicated.iter().any(|parent| target.starts_with(parent)) {
+                deduplicated.push(target);
+            }
+        }
+
+        let home = home_dir()?;
+        let root = quarantine_root(&home);
+        fs::create_dir_all(&root).map_err(|error| format!("创建隔离区失败：{error}"))?;
+        let mut moved = Vec::new();
+        let mut errors = Vec::new();
+
+        for (index, target) in deduplicated.into_iter().enumerate() {
+            let display_name = target
+                .file_name()
+                .and_then(|value| value.to_str())
+                .unwrap_or("未命名项目")
+                .to_string();
+            let is_dir = target.is_dir();
+            let size_bytes = path_stats(&target).size_bytes;
+            let id = unique_quarantine_id(index);
+            let item_dir = root.join(&id);
+            let payload = item_dir.join("payload");
+            if let Err(error) = fs::create_dir(&item_dir) {
+                errors.push(format!("{display_name}：无法建立隔离位置（{error}）"));
+                continue;
+            }
+            if let Err(error) = fs::rename(&target, &payload) {
+                let _ = fs::remove_dir(&item_dir);
+                errors.push(format!("{display_name}：移动失败（{error}）"));
+                continue;
+            }
+            let item = QuarantineItem {
+                id: id.clone(),
+                app_id: app_id.clone(),
+                app_name: definition.name.to_string(),
+                display_name: display_name.clone(),
+                original_path: target.to_string_lossy().to_string(),
+                quarantine_path: payload.to_string_lossy().to_string(),
+                item_type: if is_dir { "folder" } else { "file" }.to_string(),
+                size_bytes,
+                quarantined_unix: unix_time(SystemTime::now()),
+            };
+            let manifest = item_dir.join("manifest.json");
+            let serialized = serde_json::to_string_pretty(&item)
+                .map_err(|error| format!("生成隔离记录失败：{error}"))?;
+            if let Err(error) = fs::write(&manifest, serialized) {
+                let _ = fs::rename(&payload, &target);
+                let _ = fs::remove_dir(&item_dir);
+                errors.push(format!("{display_name}：无法保存恢复记录（{error}）"));
+                continue;
+            }
+            moved.push(item);
+        }
+        Ok(CleanupBatch { moved, errors })
+    })
+    .await
+    .map_err(|error| format!("安全清理任务异常：{error}"))?
+}
+
+#[tauri::command]
+fn list_quarantine_items() -> Result<Vec<QuarantineItem>, String> {
+    let home = home_dir()?;
+    let root = quarantine_root(&home);
+    if !root.exists() {
+        return Ok(Vec::new());
+    }
+    let mut items = Vec::new();
+    for entry in fs::read_dir(root)
+        .map_err(|error| format!("读取隔离区失败：{error}"))?
+        .flatten()
+    {
+        let manifest = entry.path().join("manifest.json");
+        if manifest.exists() {
+            if let Ok(item) = read_quarantine_manifest(&manifest) {
+                items.push(item);
+            }
+        }
+    }
+    items.sort_by(|left, right| right.quarantined_unix.cmp(&left.quarantined_unix));
+    Ok(items)
+}
+
+#[tauri::command]
+fn restore_quarantine_item(id: String) -> Result<(), String> {
+    if !valid_quarantine_id(&id) {
+        return Err("隔离记录编号无效".to_string());
+    }
+    let home = home_dir()?;
+    let item_dir = quarantine_root(&home).join(&id);
+    let manifest_path = item_dir.join("manifest.json");
+    let item = read_quarantine_manifest(&manifest_path)?;
+    let payload = item_dir.join("payload");
+    let original = PathBuf::from(&item.original_path);
+    if original.exists() {
+        return Err("原位置已经存在同名文件，请先改名或移走后再恢复".to_string());
+    }
+    if let Some(parent) = original.parent() {
+        fs::create_dir_all(parent).map_err(|error| format!("重建原目录失败：{error}"))?;
+    }
+    fs::rename(&payload, &original).map_err(|error| format!("恢复失败：{error}"))?;
+    fs::remove_file(&manifest_path).map_err(|error| format!("清理恢复记录失败：{error}"))?;
+    fs::remove_dir(&item_dir).map_err(|error| format!("清理隔离目录失败：{error}"))?;
+    Ok(())
+}
+
+#[tauri::command]
+fn permanently_delete_quarantine_item(id: String) -> Result<(), String> {
+    if !valid_quarantine_id(&id) {
+        return Err("隔离记录编号无效".to_string());
+    }
+    let home = home_dir()?;
+    let item_dir = quarantine_root(&home).join(&id);
+    if !item_dir.starts_with(quarantine_root(&home)) || !item_dir.exists() {
+        return Err("隔离项目不存在".to_string());
+    }
+    let _ = read_quarantine_manifest(&item_dir.join("manifest.json"))?;
+    fs::remove_dir_all(&item_dir).map_err(|error| format!("永久删除失败：{error}"))
+}
+
 fn keyring_entry(provider: &str) -> Result<keyring::Entry, String> {
     keyring::Entry::new(KEYRING_SERVICE, provider)
         .map_err(|error| format!("无法访问系统钥匙串：{error}"))
@@ -517,6 +914,71 @@ async fn analyze_scan(
         _ => return Err("暂不支持该AI服务商".to_string()),
     };
 
+    Ok(AiResponse {
+        provider,
+        model,
+        content,
+    })
+}
+
+#[tauri::command]
+async fn analyze_cleanup_candidates(
+    provider: String,
+    model: String,
+    question: String,
+    candidates: Vec<CleanupCandidate>,
+) -> Result<AiResponse, String> {
+    if candidates.is_empty() {
+        return Err("没有可供AI复核的文件".to_string());
+    }
+    let api_key = keyring_entry(&provider)?
+        .get_password()
+        .map_err(|_| format!("尚未配置{} API Key", provider.to_uppercase()))?;
+    let now = unix_time(SystemTime::now());
+    let anonymous_items: Vec<Value> = candidates
+        .iter()
+        .take(30)
+        .enumerate()
+        .map(|(index, item)| {
+            json!({
+                "item": index + 1,
+                "app": item.app_name,
+                "category": item.category,
+                "kind": item.file_kind,
+                "item_type": item.item_type,
+                "size_mb": item.size_bytes as f64 / 1_048_576.0,
+                "days_since_modified": now.saturating_sub(item.modified_unix) / 86_400,
+                "local_risk": item.risk
+            })
+        })
+        .collect();
+    let prompt = format!(
+        "你是轻盘的文件清理复核助手。你只收到匿名化元数据，没有文件正文、文件名或完整路径。\
+        请根据可重建性、修改时间、类型和本地风险，为每一项给出：建议保留、可移入隔离区、或必须人工确认。\
+        不得声称你已查看内容，不得直接执行删除。先给一句话结论，再按项目编号解释，最后给出最安全的处理顺序。\n\n\
+        用户问题：{}\n\n匿名项目：{}",
+        question,
+        Value::Array(anonymous_items)
+    );
+    let client = Client::builder()
+        .timeout(Duration::from_secs(90))
+        .build()
+        .map_err(|error| format!("创建AI请求失败：{error}"))?;
+    let content = match provider.as_str() {
+        "gemini" => call_gemini(&client, &api_key, &model, &prompt).await?,
+        "deepseek" => {
+            call_openai_compatible(
+                &client,
+                "https://api.deepseek.com/chat/completions",
+                &api_key,
+                &model,
+                &prompt,
+            )
+            .await?
+        }
+        "openai" => call_openai(&client, &api_key, &model, &prompt).await?,
+        _ => return Err("暂不支持该AI服务商".to_string()),
+    };
     Ok(AiResponse {
         provider,
         model,
@@ -697,10 +1159,16 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             scan_system,
+            scan_app_candidates,
+            quarantine_items,
+            list_quarantine_items,
+            restore_quarantine_item,
+            permanently_delete_quarantine_item,
             save_api_key,
             api_key_status,
             delete_api_key,
-            analyze_scan
+            analyze_scan,
+            analyze_cleanup_candidates
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Qingpan desktop application");
