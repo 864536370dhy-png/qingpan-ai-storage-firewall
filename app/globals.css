@@ -218,6 +218,10 @@ h1, h2, h3, p { margin-top: 0; }
 .primary-button, .secondary-button, .ghost-button {
   min-height: 36px;
   padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   border-radius: 10px;
   font-size: 9px;
   font-weight: 700;
@@ -225,7 +229,7 @@ h1, h2, h3, p { margin-top: 0; }
 }
 .primary-button { border: 1px solid #7e97ff; color: white; background: linear-gradient(180deg, #718eff, #5e78df); box-shadow: 0 8px 20px rgba(73, 100, 220, .17); }
 .primary-button:hover { transform: translateY(-1px); filter: brightness(1.07); }
-.primary-button > span { margin-right: 7px; }
+.primary-button > span { flex: 0 0 auto; }
 .primary-button i { margin-left: 10px; font-style: normal; }
 .secondary-button { border: 1px solid #34445b; color: #dbe2ee; background: #182230; }
 .secondary-button:hover { border-color: #526789; background: #1d2939; }

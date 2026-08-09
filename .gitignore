@@ -43,3 +43,7 @@ next-env.d.ts
 /work/
 /src-tauri/target/
 /src-tauri/gen/
+
+# Local design explorations and source icon drafts
+/design-concepts/
+/tubiao*.png

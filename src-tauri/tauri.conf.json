@@ -38,8 +38,8 @@
       "icons/icon.ico"
     ],
     "category": "Utility",
-    "shortDescription": "AI驱动的本地空间分析工具",
-    "longDescription": "读取本机应用与存储元数据，使用AI解释空间占用，并提供只读的安全处理建议。",
+    "shortDescription": "AI驱动的本地空间分析与安全清理工具",
+    "longDescription": "分析本机应用与存储占用，提供大文件、重复文件、应用卸载、缓存分析和可恢复的应用级深度清理。",
     "macOS": {
       "minimumSystemVersion": "12.0",
       "infoPlist": "Info.plist"

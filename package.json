@@ -14,11 +14,12 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "node scripts/build-desktop.mjs",
-    "test": "npm run build && node --test tests/rendered-html.test.mjs",
+    "test": "npm run build && node --test tests/*.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern dist-desktop --ignore-pattern .next --ignore-pattern src-tauri/target --ignore-pattern src-tauri/gen",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
+    "@tabler/icons-react": "^3.46.0",
     "@tauri-apps/api": "^2.11.1",
     "drizzle-orm": "0.45.2",
     "gsap": "^3.15.0",
