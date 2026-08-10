@@ -4,97 +4,100 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#080b13" />
-    <meta name="description" content="轻盘是一款面向 macOS 的本地空间分析与安全清理工具。" />
+    <meta name="description" content="轻盘是一款面向 macOS 的智能空间管理工具，帮助你解释容量变化、定位应用占用并生成有安全边界的处理方案。" />
     <meta property="og:title" content="轻盘 · AI 智能空间管理" />
-    <meta property="og:description" content="看懂空间占用，安全处理文件，并保留恢复能力。" />
+    <meta property="og:description" content="看懂空间变化，获得清楚、可确认、可恢复的处理方案。" />
     <meta property="og:image" content="/assets/qingpan-social.png" />
     <title>轻盘 · AI 智能空间管理</title>
     <link rel="icon" href="/assets/qingpan-mark.png" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
+    <svg class="icon-sprite" aria-hidden="true">
+      <symbol id="i-apple" viewBox="0 0 24 24"><path d="M8.286 7.008c-3.216 0 -4.286 3.23 -4.286 5.92c0 3.229 2.143 8.072 4.286 8.072c1.165 -.05 1.799 -.538 3.214 -.538c1.406 0 1.607 .538 3.214 .538s4.286 -3.229 4.286 -5.381c-.03 -.011 -2.649 -.434 -2.679 -3.23c-.02 -2.335 2.589 -3.179 2.679 -3.228c-1.096 -1.606 -3.162 -2.113 -3.75 -2.153c-1.535 -.12 -3.032 1.077 -3.75 1.077c-.729 0 -2.036 -1.077 -3.214 -1.077"/><path d="M12 4a2 2 0 0 0 2 -2a2 2 0 0 0 -2 2"/></symbol>
+      <symbol id="i-desktop" viewBox="0 0 24 24"><path d="M3 5a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1v-10"/><path d="M7 20h10"/><path d="M9 16v4"/><path d="M15 16v4"/></symbol>
+      <symbol id="i-brain" viewBox="0 0 24 24"><path d="M15.5 13a3.5 3.5 0 0 0 -3.5 3.5v1a3.5 3.5 0 0 0 7 0v-1.8"/><path d="M8.5 13a3.5 3.5 0 0 1 3.5 3.5v1a3.5 3.5 0 0 1 -7 0v-1.8"/><path d="M17.5 16a3.5 3.5 0 0 0 0 -7h-.5"/><path d="M19 9.3v-2.8a3.5 3.5 0 0 0 -7 0"/><path d="M6.5 16a3.5 3.5 0 0 1 0 -7h.5"/><path d="M5 9.3v-2.8a3.5 3.5 0 0 1 7 0v10"/></symbol>
+      <symbol id="i-scan" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M3 7v-2a2 2 0 0 1 2 -2h2"/><path d="M3 17v2a2 2 0 0 0 2 2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M17 21h2a2 2 0 0 0 2 -2v-2"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"/><path d="M21 21l-6 -6"/></symbol>
+      <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 7a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M14 15a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M15 6a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M3 18a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M9 17l5 -1.5"/><path d="M6.5 8.5l7.81 5.37"/><path d="M7 7l8 -1"/></symbol>
+      <symbol id="i-list" viewBox="0 0 24 24"><path d="M3.5 5.5l1.5 1.5l2.5 -2.5"/><path d="M3.5 11.5l1.5 1.5l2.5 -2.5"/><path d="M3.5 17.5l1.5 1.5l2.5 -2.5"/><path d="M11 6h9"/><path d="M11 12h9"/><path d="M11 18h9"/></symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24"><path d="M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06"/><path d="M15 19l2 2l4 -4"/></symbol>
+      <symbol id="i-box" viewBox="0 0 24 24"><path d="M12 3l8 4.5v9l-8 4.5l-8 -4.5v-9l8 -4.5"/><path d="M12 12l8 -4.5"/><path d="M12 12v9"/><path d="M12 12l-8 -4.5"/></symbol>
+      <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M16 18a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m0 -12a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m-7 12a6 6 0 0 1 6 -6a6 6 0 0 1 -6 -6a6 6 0 0 1 -6 6a6 6 0 0 1 6 6"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"/><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/></symbol>
+    </svg>
+
     <header class="site-header">
-      <a class="brand" href="#top" aria-label="轻盘首页">
-        <img src="/assets/qingpan-mark.png" alt="" />
-        <span>轻盘</span>
-      </a>
-      <nav aria-label="主导航">
-        <a href="#features">产品能力</a>
-        <a href="#safety">安全原则</a>
-        <a href="#download">下载</a>
-      </nav>
+      <a class="brand" href="#top" aria-label="轻盘首页"><img src="/assets/qingpan-mark.png" alt="" /><span>轻盘</span></a>
+      <nav aria-label="主导航"><a href="#assistant">智能助手</a><a href="#workflow">工作方式</a><a href="#safety">安全原则</a><a href="#download">下载</a></nav>
     </header>
 
     <main id="top">
       <section class="hero">
         <div class="hero-copy">
-          <p class="eyebrow"><span></span> 专为 macOS 设计</p>
+          <p class="eyebrow"><span></span> AI SPACE COPILOT FOR macOS</p>
           <h1>看懂空间，<br />再安全处理。</h1>
-          <p class="hero-description">轻盘扫描本机应用与关联数据，解释空间从哪里增长，并把每一次处理放进可恢复的安全流程。</p>
+          <p class="hero-description">轻盘像一位懂你电脑的空间助手：解释容量变化、定位应用占用，并把复杂问题整理成清楚、可确认、可恢复的处理方案。</p>
           <div class="hero-actions" id="download">
-            <a class="primary-button" href="https://github.com/864536370dhy-png/qingpan-ai-storage-firewall/releases/download/v0.1.0/Qingpan_0.1.0_macOS_arm64.dmg">
-              <span class="apple-mark">●</span>
-              <span><strong>下载 Mac 版</strong><small>v0.1.0 · Apple Silicon</small></span>
-            </a>
-            <button class="secondary-button" type="button" disabled>
-              <span class="window-mark">⊞</span>
-              <span><strong>Windows 版</strong><small>正在适配</small></span>
-            </button>
+            <a class="primary-button" href="https://github.com/864536370dhy-png/qingpan-ai-storage-firewall/releases/download/v0.1.0/Qingpan_0.1.0_macOS_arm64.dmg"><svg class="ui-icon" aria-hidden="true"><use href="#i-apple"/></svg><span><strong>下载 Mac 版</strong><small>v0.1.0 · Apple Silicon</small></span></a>
+            <button class="secondary-button" type="button" disabled><svg class="ui-icon" aria-hidden="true"><use href="#i-desktop"/></svg><span><strong>Windows 版</strong><small>正在适配</small></span></button>
           </div>
           <p class="download-note">支持 macOS 12.0 及以上 · 当前为测试版本</p>
         </div>
         <div class="hero-visual">
           <div class="glow"></div>
           <img src="/assets/qingpan-social.png" alt="轻盘桌面端产品界面预览" />
+          <div class="hero-insight"><span><svg class="ui-icon" aria-hidden="true"><use href="#i-sparkles"/></svg></span><div><small>空间调查完成</small><strong>主要增长来自剪映预览缓存</strong></div></div>
         </div>
       </section>
 
-      <section class="trust-strip" aria-label="产品特点">
-        <span>本地扫描</span><i></i><span>AI 只接收匿名容量汇总</span><i></i><span>先隔离，后删除</span><i></i><span>随时恢复</span>
+      <section class="trust-strip" aria-label="产品特点"><span>真实本机扫描</span><i></i><span>空间变化解释</span><i></i><span>安全方案生成</span><i></i><span>人工确认执行</span></section>
+
+      <section class="assistant-section" id="assistant">
+        <div class="section-heading assistant-heading">
+          <div><p class="eyebrow"><span></span> SMART SPACE ASSISTANT</p><h2>问一句，轻盘把空间问题讲明白。</h2></div>
+          <p>不只是展示容量数字。轻盘会结合真实扫描结果，说明空间从哪里增长、哪些内容值得先看，以及哪些数据应该继续保护。</p>
+        </div>
+        <div class="assistant-stage">
+          <article class="conversation-card">
+            <div class="conversation-head"><span><svg class="ui-icon" aria-hidden="true"><use href="#i-brain"/></svg></span><div><b>AI 空间调查</b><small>只使用匿名容量与风险汇总</small></div><em>已完成</em></div>
+            <div class="user-message">为什么今天突然多了 31 GB？</div>
+            <div class="assistant-message"><p>主要增长来自剪映预览缓存和微信聊天视频。</p><ul><li><b>18.6 GB</b> 可重建内容，建议优先检查</li><li><b>7.2 GB</b> 需要你确认后再处理</li><li>工程文件、聊天记录和数据库继续保持保护</li></ul></div>
+            <div class="model-row"><span>可选模型</span><b>Gemini</b><b>DeepSeek</b><b>OpenAI</b></div>
+          </article>
+          <aside class="plan-card">
+            <div class="plan-status"><svg class="ui-icon" aria-hidden="true"><use href="#i-list"/></svg><span>建议处理顺序</span></div>
+            <ol><li><span>1</span><div><b>先看可重建缓存</b><small>风险低 · 预计 12.4 GB</small></div></li><li><span>2</span><div><b>检查长期未使用文件</b><small>需要确认 · 预计 6.2 GB</small></div></li><li class="protected"><span><svg class="ui-icon" aria-hidden="true"><use href="#i-lock"/></svg></span><div><b>继续保护重要内容</b><small>数据库、工程与原始资料</small></div></li></ol>
+            <p>方案只提供依据和顺序，文件处理仍由你确认。</p>
+          </aside>
+        </div>
+        <div class="assistant-capabilities">
+          <article><span><svg class="ui-icon" aria-hidden="true"><use href="#i-brain"/></svg></span><h3>自然语言调查</h3><p>直接询问“空间为什么突然变大”，根据扫描汇总解释主要来源。</p></article>
+          <article><span><svg class="ui-icon" aria-hidden="true"><use href="#i-chart"/></svg></span><h3>容量变化解释</h3><p>区分应用本体、关联数据和近期活跃体积，避免把不同数据混为一谈。</p></article>
+          <article><span><svg class="ui-icon" aria-hidden="true"><use href="#i-list"/></svg></span><h3>处理顺序生成</h3><p>结合大小、类型、修改时间和可重建性，整理值得优先检查的项目。</p></article>
+          <article><span><svg class="ui-icon" aria-hidden="true"><use href="#i-shield"/></svg></span><h3>文件级匿名复核</h3><p>处理前再次说明风险；文件名、完整路径与正文不会发送给模型。</p></article>
+        </div>
       </section>
 
-      <section class="features" id="features">
-        <div class="section-heading">
-          <p class="eyebrow"><span></span> PRODUCT CAPABILITIES</p>
-          <h2>不是再多一个清理按钮，<br />而是一套看得懂的空间管理流程。</h2>
-        </div>
-        <div class="feature-grid">
-          <article>
-            <b>01</b><h3>整机应用扫描</h3><p>识别应用本体、关联数据和容量变化，让占用来源一目了然。</p>
-          </article>
-          <article>
-            <b>02</b><h3>智能处理建议</h3><p>按风险等级区分缓存、工程文件与重要数据，不把未知内容说成可安全删除。</p>
-          </article>
-          <article>
-            <b>03</b><h3>安全隔离与恢复</h3><p>文件先进入轻盘隔离区，确认无误后再永久删除，误操作仍能恢复。</p>
-          </article>
-        </div>
+      <section class="workflow" id="workflow">
+        <div class="section-heading"><p class="eyebrow"><span></span> HOW IT WORKS</p><h2>从发现问题到安全处理，<br />每一步都有边界。</h2></div>
+        <ol class="workflow-grid">
+          <li><span><svg class="ui-icon" aria-hidden="true"><use href="#i-scan"/></svg></span><b>扫描</b><small>读取本机空间事实</small></li>
+          <li><span><svg class="ui-icon" aria-hidden="true"><use href="#i-search"/></svg></span><b>定位</b><small>找到主要占用来源</small></li>
+          <li><span><svg class="ui-icon" aria-hidden="true"><use href="#i-brain"/></svg></span><b>解释</b><small>讲清增长与风险</small></li>
+          <li><span><svg class="ui-icon" aria-hidden="true"><use href="#i-list"/></svg></span><b>确认</b><small>查看方案与证据</small></li>
+          <li><span><svg class="ui-icon" aria-hidden="true"><use href="#i-box"/></svg></span><b>隔离</b><small>保留恢复能力</small></li>
+        </ol>
       </section>
 
       <section class="safety" id="safety">
-        <div>
-          <p class="eyebrow"><span></span> LOCAL FIRST</p>
-          <h2>你的文件，留在你的电脑里。</h2>
-          <p>常规扫描只读取路径、大小和修改时间等元数据。文件名、完整路径和文件正文不会发送给 AI。</p>
-        </div>
-        <ul>
-          <li><span>✓</span> 未验证目录默认保护</li>
-          <li><span>✓</span> AI 没有文件操作权限</li>
-          <li><span>✓</span> 永久删除需要再次确认</li>
-        </ul>
+        <div><p class="eyebrow"><span></span> LOCAL FIRST</p><h2>你的文件，留在你的电脑里。</h2><p>常规扫描只读取路径、大小和修改时间等元数据。文件名、完整路径和文件正文不会发送给 AI。</p></div>
+        <ul><li><svg class="ui-icon" aria-hidden="true"><use href="#i-shield"/></svg> 未验证目录默认保护</li><li><svg class="ui-icon" aria-hidden="true"><use href="#i-lock"/></svg> AI 没有文件操作权限</li><li><svg class="ui-icon" aria-hidden="true"><use href="#i-box"/></svg> 永久删除需要再次确认</li></ul>
       </section>
 
-      <section class="final-cta">
-        <img src="/assets/qingpan-mark.png" alt="" />
-        <div><h2>让空间管理变得清楚一点。</h2><p>下载轻盘，在本机完成第一次真实扫描。</p></div>
-        <a href="https://github.com/864536370dhy-png/qingpan-ai-storage-firewall/releases/download/v0.1.0/Qingpan_0.1.0_macOS_arm64.dmg">下载 Mac 版</a>
-      </section>
+      <section class="final-cta"><img src="/assets/qingpan-mark.png" alt="" /><div><h2>让复杂的空间问题，变成清楚的下一步。</h2><p>下载轻盘，在本机完成第一次真实扫描和空间调查。</p></div><a href="https://github.com/864536370dhy-png/qingpan-ai-storage-firewall/releases/download/v0.1.0/Qingpan_0.1.0_macOS_arm64.dmg">下载 Mac 版</a></section>
     </main>
 
-    <footer>
-      <div class="brand"><img src="/assets/qingpan-mark.png" alt="" /><span>轻盘</span></div>
-      <p>AI 智能空间管理 · macOS</p>
-      <div><a href="/privacy.html">隐私说明</a><a href="https://github.com/864536370dhy-png/qingpan-ai-storage-firewall/releases">版本记录</a></div>
-    </footer>
+    <footer><div class="brand"><img src="/assets/qingpan-mark.png" alt="" /><span>轻盘</span></div><p>AI 智能空间管理 · macOS</p><div><a href="/privacy.html">隐私说明</a><a href="https://github.com/864536370dhy-png/qingpan-ai-storage-firewall/releases">版本记录</a><a href="https://github.com/tabler/tabler-icons">图标来源</a></div></footer>
   </body>
 </html>
